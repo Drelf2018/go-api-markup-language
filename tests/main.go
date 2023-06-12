@@ -9,10 +9,10 @@ import (
 var log = utils.GetLog()
 
 func main() {
-	am := parser.GetApi("./tests/user.api")
+	am := parser.GetApi("./tests/user.aml")
+	am.ToJson("./tests/user.json")
 	for _, api := range am.Apis {
 		log.Info(api)
 	}
-	am.ToJson("./tests/user.json")
 	translator.ToPython(am, "./tests/user.json")
 }

@@ -3,10 +3,10 @@ package parser
 import "strings"
 
 // 类型集合
-type TT map[string]struct{}
+type Types map[string]struct{}
 
-func (tt *TT) Has(key string) bool {
-	for k := range *tt {
+func (types *Types) Has(key string) bool {
+	for k := range *types {
 		if key == k {
 			return true
 		}
@@ -14,21 +14,27 @@ func (tt *TT) Has(key string) bool {
 	return false
 }
 
-func (tt *TT) Join() string {
+func (types *Types) Join() string {
 	keys := []string{}
-	for k := range *tt {
+	for k := range *types {
 		keys = append(keys, k)
 	}
 	return strings.Join(keys, "|")
 }
 
-func NewTypes(keys ...string) *TT {
-	tt := make(TT)
+func NewTypes(keys ...string) *Types {
+	types := make(Types)
 	for _, k := range keys {
-		tt[k] = struct{}{}
+		types[k] = struct{}{}
 	}
-	return &tt
+	return &types
 }
 
-var TokenTypes = NewTypes("int", "str", "bool", "float")
-var RequestTypes = NewTypes("GET", "POST")
+// 支持的变量类型 int str bool float
+var VarTypes = NewTypes("int", "str", "bool", "float")
+
+// 支持的请求类型 GET POST
+var MethodTypes = NewTypes("GET", "POST")
+
+// 支持的请求字段名
+var RequestTypes = NewTypes("data", "params", "cookies", "headers")

@@ -14,14 +14,9 @@ type Token struct {
 	Value string `json:"value,omitempty"`
 }
 
-func NewToken(data []string) *Token {
-	data[2] = strings.Trim(data[2], " ")
-	return &Token{data[0], data[1], data[2], data[3]}
-}
-
 // 判断该语句是否为起始语句
 func (token *Token) IsApi() bool {
-	return RequestTypes.Has(token.Type)
+	return MethodTypes.Has(token.Type)
 }
 
 // 判断该语句是否为必要变量
@@ -49,10 +44,31 @@ func (token *Token) ToPython() (s string) {
 		if token.Type == "str" || token.Type == "" {
 			s += " = \"" + token.Value + "\""
 		} else if token.Type == "bool" {
-			s += " = " + strings.ToUpper(token.Value[:1]) + token.Value[1:]
+			s += " = " + Capitalize(token.Value)
 		} else {
 			s += " = " + token.Value
 		}
 	}
 	return
+}
+
+func NewToken(data []string) *Token {
+	data[2] = strings.Trim(data[2], " ")
+	return &Token{data[0], data[1], data[2], data[3]}
+}
+
+type Tokens map[string]*Token
+
+// 添加数据
+func (ts Tokens) Add(token *Token) {
+	ts[token.Name] = token
+}
+
+// 转字典
+func (ts Tokens) ToDict() map[string]string {
+	dic := make(map[string]string)
+	for k, v := range ts {
+		dic[k] = v.Value
+	}
+	return dic
 }

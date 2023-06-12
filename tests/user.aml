@@ -4,4 +4,14 @@ GET get_user_card: 用户名片信息 = {
         int mid: 目标用户mid
         bool photo: 是否请求用户主页头图 = false
     }
+    data = {
+        int test1 = 1
+    }
+
+    cookies = {
+        str test2 = 2
+    }
+    headers = {
+        bool test3 = 3
+    }
 }

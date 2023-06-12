@@ -1,16 +1,20 @@
 package parser
 
+import "github.com/Drelf2020/utils"
+
+var log = utils.GetLog()
+
 // 从文件解析出 Api
 func GetApi(path string) (am *ApiManager) {
 	am = NewApiManager()
 	api := ReadFile(path)
 	FindTokens(api, func(token *Token) {
 		if token.IsApi() {
-			am.Done(NewApi(token))
-			return
+			am.New(token)
+		} else {
+			am.Add(token)
 		}
-		am.Add(token)
 	})
-	am.Done(nil)
+	am.Done()
 	return
 }

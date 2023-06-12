@@ -54,11 +54,11 @@ def get_user_card(mid: int, photo: bool = False):
     用户名片信息
 
     Args:
-        photo (bool): 是否请求用户主页头图
-
         mid (int): 目标用户mid
+
+        photo (bool): 是否请求用户主页头图
 
     """
     api = Api(**API["get_user_card"])
-    api.update(photo=photo, mid=mid)
+    api.update(mid=mid, photo=photo)
     return api.request()
