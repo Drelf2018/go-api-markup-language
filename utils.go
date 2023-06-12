@@ -58,10 +58,20 @@ func Capitalize(s string) string {
 }
 
 // 字符串切片
-func Slice(s, start, end string) string {
-	st := strings.Index(s, start)
-	sp := strings.LastIndex(s, end)
-	return s[st : sp+1]
+//
+// cut 表示区间开闭
+//
+// 0(00) 左右都不保留
+//
+// 1(01) 左不保留右保留
+//
+// 2(10) 左保留右不保留
+//
+// 3(11) 左右都保留
+func Slice(s, start, end string, cut int) string {
+	st := strings.Index(s, start) + (cut>>1^1)*len(start)
+	sp := strings.LastIndex(s, end) + (cut&1)*len(end)
+	return s[st:sp]
 }
 
 // json 序列化

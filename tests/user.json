@@ -3,12 +3,6 @@
         "url": "https://api.bilibili.com/x/web-interface/card",
         "method": "GET",
         "comment": "用户名片信息",
-        "data": {
-            "test1": {
-                "type": "int",
-                "value": "1"
-            }
-        },
         "params": {
             "mid": {
                 "type": "int",
@@ -18,18 +12,6 @@
                 "type": "bool",
                 "hint": "是否请求用户主页头图",
                 "value": "false"
-            }
-        },
-        "headers": {
-            "test3": {
-                "type": "bool",
-                "value": "3"
-            }
-        },
-        "cookies": {
-            "test2": {
-                "type": "str",
-                "value": "2"
             }
         }
     }

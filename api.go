@@ -98,7 +98,7 @@ func (am *ApiManager) ToJson(path string) error {
 	s := JsonDump(am.Output, "    ")
 	for _, api := range Filter(am.Apis, func(a *Api) bool { return a.Anchor != "" }) {
 		info := JsonDump(api.Info.ToDict(), "        ")
-		s = strings.Replace(s, "\"anchor\": \""+api.Function+"\"", Slice(info, "\"", "\""), 1)
+		s = strings.Replace(s, "\"anchor\": \""+api.Function+"\"", Slice(info, "\"", "\"", 3), 1)
 	}
 	return WriteFile(path, s)
 }
