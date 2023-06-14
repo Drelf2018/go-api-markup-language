@@ -15,6 +15,10 @@ type userModal = {
 
 GET get_user_card: 用户名片信息 = {
     str url = https://api.bilibili.com/x/web-interface/card
-    query params
-    res<userModal> response
+    query params = {
+        other = false
+    }
+    res<userModal> response = {
+        str o = 你懂个破
+    }
 }

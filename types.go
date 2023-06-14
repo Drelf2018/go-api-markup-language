@@ -6,11 +6,16 @@ import (
 )
 
 // 类型集合
-type Types map[string]*Tokens
+type Types map[string]*Token
 
 // 添加类型
-func (types Types) Add(key string, args ...string) {
-	types[key] = NewTokens(key, args...)
+func (types Types) Add(token *Token, names ...string) {
+	for _, n := range names {
+		types[n] = nil
+	}
+	if token != nil {
+		types[token.Name] = token
+	}
 }
 
 // 判断字段
@@ -36,33 +41,41 @@ func (types *Types) Join() string {
 func (ts *Types) Union(typess ...*Types) *Types {
 	nt := *ts
 	for _, types := range typess {
-		for k := range *types {
-			nt.Add(k)
+		for k, v := range *types {
+			nt.Add(v, k)
 		}
 	}
 	return &nt
 }
 
-// 正则查找
+// 生成正则表达式
+func (types *Types) ToRegexp() *regexp.Regexp {
+	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join() + `)?>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+}
+
+// 正则查找字符串
+func (types *Types) FindStrings(api string) [][]string {
+	return types.ToRegexp().FindAllStringSubmatch(api, -1)
+}
+
+// 正则查找语句
 func (types *Types) FindTokens(api string) (tokens []*Token) {
-	re := regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join() + `)?>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
-		tokens = append(tokens, NewToken(sList[1:]))
+		tokens = append(tokens, NewToken(sList[1:]...))
 	}
 	return
 }
 
-// 获取 Tokens
-func (types *Types) Get(key string) *Tokens {
+// 获取 Token
+func (types *Types) Get(key string) *Token {
 	return (*types)[key]
 }
 
 // 构造函数
 func NewTypes(keys ...string) *Types {
 	types := make(Types)
-	for _, k := range keys {
-		types.Add(k)
-	}
+	types.Add(nil, keys...)
 	return &types
 }
 
@@ -71,6 +84,3 @@ var VarTypes = NewTypes("type", "auto", "str", "num", "bool")
 
 // 支持的请求类型 GET POST
 var MethodTypes = NewTypes("GET", "POST")
-
-// 支持的请求字段名 data params headers cookies
-var RequestTypes = NewTypes("data", "params", "headers", "cookies")

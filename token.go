@@ -7,11 +7,19 @@ import (
 )
 
 // 单条语句
+//
+// 其中 Args 表示其 Name 中携带的参数
+//
+// 当该语句为字典时 Tokens 不为空 表示其下包含的语句
 type Token struct {
-	Type  string `json:"type,omitempty"`
-	Name  string `json:"-"`
-	Hint  string `json:"hint,omitempty"`
-	Value string `json:"value,omitempty"`
+	Type   string            `json:"type,omitempty"`
+	Name   string            `json:"-"`
+	Hint   string            `json:"hint,omitempty"`
+	Value  string            `json:"value,omitempty"`
+	Parent *Token            `json:"-"`
+	Args   []string          `json:"-"`
+	Tokens map[string]*Token `json:"values,omitempty"`
+	open   bool
 }
 
 // 去除参数的纯类型
@@ -20,14 +28,6 @@ func (token *Token) PureType() string {
 		return t
 	}
 	return token.Type
-}
-
-// 去除参数的纯名字
-func (token *Token) PureName() string {
-	if t := Slice(token.Name, "", "<", 0); t != "" {
-		return t
-	}
-	return token.Name
 }
 
 // 判断该语句是否为 Api 起始语句
@@ -40,13 +40,18 @@ func (token *Token) IsType() bool {
 	return token.Type == "type"
 }
 
-// 判断该语句是否为变量类型
-func (token *Token) InType() bool {
+// 判断该语句是否为在变量类型内
+func (token *Token) InTypes() bool {
 	return VarTypes.Has(token.PureType())
 }
 
+// 判断该语句是否为起始括号
+func (token *Token) IsOpen() bool {
+	return token.open
+}
+
 // 判断该语句是否为闭合括号
-func (token *Token) IsClosed() bool {
+func (token *Token) IsClose() bool {
 	return token.Name == "}"
 }
 
@@ -83,46 +88,66 @@ func (token *Token) ToPython() (s string) {
 	return
 }
 
-func NewToken(data []string) *Token {
-	data[2] = strings.Trim(data[2], " ")
-	return &Token{data[0], data[1], data[2], data[3]}
+// 添加子语句
+func (token *Token) Add(t *Token) {
+	t.Parent = token
+	token.Tokens[t.Name] = t
 }
 
-type Tokens struct {
-	// 类型名
-	Name string
-	// 参数名
-	Args []string
-	// 子语句
-	Tokens map[string]*Token
-}
-
-// 添加数据
-func (ts Tokens) Add(token *Token) {
-	ts.Tokens[token.Name] = token
+// 移除子语句
+func (token *Token) Pop(name string) *Token {
+	if v, ok := token.Tokens[name]; ok {
+		delete(token.Tokens, name)
+		return v
+	}
+	return nil
 }
 
 // 转字典
-func (ts Tokens) ToDict() map[string]string {
+func (token *Token) ToDict() map[string]string {
 	dic := make(map[string]string)
-	for k, v := range ts.Tokens {
+	for k, v := range token.Tokens {
 		dic[k] = v.Value
 	}
 	return dic
 }
 
-func NewTokens(name string, args ...string) *Tokens {
-	return &Tokens{
-		name,
-		args,
-		make(map[string]*Token),
+// 解析类似 res<T1,T2> 中的子类型 T1 T2
+//
+// data 顺序 Type Name Hint Value
+func NewToken(data ...string) *Token {
+	// 自动推断类型
+	typ := data[0]
+	val := data[3]
+	tokens := make(map[string]*Token)
+	if typ == "" || typ == "auto" {
+		typ = AutoType(val)
+	} else {
+		var as []string
+		typ, as = NameSlice(typ)
+		if token := VarTypes.Get(typ); token != nil {
+			tokens = token.Tokens
+			for i, a := range as {
+				ForMap(
+					tokens,
+					func(s string, t *Token) {
+						t.Type = a
+						// 这里还要替换值
+					},
+					func(s string, t *Token) bool { return t.Type == token.Args[i] },
+				)
+			}
+		}
 	}
-}
+	if val == "{" {
+		val = ""
+	}
 
-func MakeTokens() Tokens {
-	return Tokens{
-		"",
-		[]string{},
-		make(map[string]*Token),
-	}
+	// 处理变量名及参数
+	name, args := NameSlice(data[1])
+
+	// 去除标注前后空白
+	hint := strings.Trim(data[2], " ")
+
+	return &Token{typ, name, hint, val, nil, args, tokens, data[3] == "{"}
 }

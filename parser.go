@@ -1,13 +1,5 @@
 package parser
 
-import (
-	"strings"
-
-	"github.com/Drelf2020/utils"
-)
-
-var log = utils.GetLog()
-
 // 从文件解析出 Api
 func GetApi(path string) (am *ApiManager) {
 	// 读文本
@@ -17,52 +9,35 @@ func GetApi(path string) (am *ApiManager) {
 	ForEach(
 		VarTypes.FindTokens(api),
 		func(t *Token) {
-			// 解析类似 res<T1,T2> 中的子类型 T1 T2
-			if text := Slice(t.Name, "<", ">", 0); text != "" {
-				args := strings.Split(text, ",")
-				VarTypes.Add(t.PureName(), args...)
-				ForEach(args, func(s string) { VarTypes.Add(s) })
-			} else {
-				VarTypes.Add(t.Name)
-			}
+			ForEach(t.Args, func(s string) { VarTypes.Add(nil, s) })
+			VarTypes.Add(t)
 		},
 		func(t *Token) bool { return t.IsType() },
 	)
 
-	// 预处理 解析所有类型 包括自定义的
-	tokens := new(Tokens)
-	ForEach(
-		VarTypes.FindTokens(api),
-		func(t *Token) {
-			if t.IsType() {
-				tokens = VarTypes.Get(t.PureName())
-			} else if t.IsClosed() {
-				tokens = nil
-			} else if tokens != nil {
-				tokens.Add(t)
-			}
-		},
-		func(t *Token) bool { return t.IsClosed() || t.InType() },
-	)
-
-	// 正式解析 Api
+	// 解析 Api 解析所有类型 包括自定义的
 	am = NewApiManager()
+	token := new(Token)
 	ForEach(
-		VarTypes.Union(MethodTypes).FindTokens(api),
-		func(t *Token) {
-			if t.IsApi() {
-				am.New(t)
-			} else if am.Api == nil {
-				return
-			} else {
-				am.Add(t)
-				if am.position == nil {
-					am.Done()
+		VarTypes.Union(MethodTypes).FindStrings(api),
+		func(sList []string) {
+			t := NewToken(sList[1:]...)
+			if t.IsType() && t.IsOpen() {
+				token = VarTypes.Get(t.Name)
+			} else if t.IsApi() {
+				token = t
+			} else if t.IsClose() {
+				if token.IsApi() {
+					am.Add(token)
+				}
+				token = token.Parent
+			} else if token != nil {
+				token.Add(t)
+				if t.IsOpen() {
+					token = t
 				}
 			}
 		},
-		func(t *Token) bool { return t.IsClosed() || t.InType() },
 	)
-	am.Done()
-	return
+	return am
 }
