@@ -1,7 +1,20 @@
+type query = {
+    num mid: 目标用户mid
+    bool photo: 是否请求用户主页头图 = false
+}
+
+type res<T> = {
+    num code: 返回码
+    str message: 返回消息
+    T data: 数据
+}
+
+type userModal = {
+    str face
+}
+
 GET get_user_card: 用户名片信息 = {
-    url = https://api.bilibili.com/x/web-interface/card
-    params = {
-        int mid: 目标用户mid
-        bool photo: 是否请求用户主页头图 = false
-    }
+    str url = https://api.bilibili.com/x/web-interface/card
+    query params
+    res<userModal> response
 }

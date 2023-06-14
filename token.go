@@ -14,9 +14,40 @@ type Token struct {
 	Value string `json:"value,omitempty"`
 }
 
-// 判断该语句是否为起始语句
+// 去除参数的纯类型
+func (token *Token) PureType() string {
+	if t := Slice(token.Type, "", "<", 0); t != "" {
+		return t
+	}
+	return token.Type
+}
+
+// 去除参数的纯名字
+func (token *Token) PureName() string {
+	if t := Slice(token.Name, "", "<", 0); t != "" {
+		return t
+	}
+	return token.Name
+}
+
+// 判断该语句是否为 Api 起始语句
 func (token *Token) IsApi() bool {
 	return MethodTypes.Has(token.Type)
+}
+
+// 判断该语句是否为 type 起始语句
+func (token *Token) IsType() bool {
+	return token.Type == "type"
+}
+
+// 判断该语句是否为变量类型
+func (token *Token) InType() bool {
+	return VarTypes.Has(token.PureType())
+}
+
+// 判断该语句是否为闭合括号
+func (token *Token) IsClosed() bool {
+	return token.Name == "}"
 }
 
 // 判断该语句是否为必要变量
@@ -57,18 +88,41 @@ func NewToken(data []string) *Token {
 	return &Token{data[0], data[1], data[2], data[3]}
 }
 
-type Tokens map[string]*Token
+type Tokens struct {
+	// 类型名
+	Name string
+	// 参数名
+	Args []string
+	// 子语句
+	Tokens map[string]*Token
+}
 
 // 添加数据
 func (ts Tokens) Add(token *Token) {
-	ts[token.Name] = token
+	ts.Tokens[token.Name] = token
 }
 
 // 转字典
 func (ts Tokens) ToDict() map[string]string {
 	dic := make(map[string]string)
-	for k, v := range ts {
+	for k, v := range ts.Tokens {
 		dic[k] = v.Value
 	}
 	return dic
+}
+
+func NewTokens(name string, args ...string) *Tokens {
+	return &Tokens{
+		name,
+		args,
+		make(map[string]*Token),
+	}
+}
+
+func MakeTokens() Tokens {
+	return Tokens{
+		"",
+		[]string{},
+		make(map[string]*Token),
+	}
 }

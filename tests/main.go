@@ -10,5 +10,8 @@ var log = utils.GetLog()
 
 func main() {
 	am := parser.GetApi("./tests/user.aml")
+	for _, api := range am.Apis {
+		log.Debug(api.Info.Tokens["response"])
+	}
 	translator.ToPython(am, "./tests/", "user")
 }

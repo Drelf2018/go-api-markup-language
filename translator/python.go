@@ -11,7 +11,7 @@ func ToPythonFunc(format string, api *parser.Api) string {
 	r, o, all := []string{}, []string{}, []string{}
 	hint := api.Hint
 	params := []string{}
-	for _, token := range api.Params {
+	for _, token := range api.Params.Tokens {
 		params = append(params, fmt.Sprintf("%v (%v): %v", token.Name, token.Type, token.Hint))
 		if token.IsConstant() {
 			continue
@@ -23,7 +23,7 @@ func ToPythonFunc(format string, api *parser.Api) string {
 		}
 		all = append(all, token.Name+"="+token.Name)
 	}
-	if len(api.Params) != 0 {
+	if len(api.Params.Tokens) != 0 {
 		hint += "\n\n    Args:\n        " + strings.Join(params, "\n\n        ")
 	}
 	args := append(r, o...)

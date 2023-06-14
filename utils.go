@@ -3,7 +3,6 @@ package parser
 import (
 	"encoding/json"
 	"os"
-	"regexp"
 	"strings"
 
 	"github.com/Drelf2020/utils"
@@ -32,14 +31,14 @@ func WriteFile(path, s string) error {
 	return nil
 }
 
-var re = regexp.MustCompile(` *(?:(` + VarTypes.Join() + "|" + MethodTypes.Join() + `) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+// var re = regexp.MustCompile(` *(?:(` + VarTypes.Union(MethodTypes, TypeTypes).Join() + `) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 
-// 找出所有语句
-func FindTokens(api string, callback func(*Token)) {
-	for _, s := range re.FindAllStringSubmatch(api, -1) {
-		callback(NewToken(s[1:]))
-	}
-}
+// // 找出所有语句
+// func FindTokens(api string, callback func(*Token)) {
+// 	for _, s := range re.FindAllStringSubmatch(api, -1) {
+// 		callback(NewToken(s[1:]))
+// 	}
+// }
 
 // 更新字典
 func Update(dic ...map[string]any) map[string]any {
@@ -69,8 +68,13 @@ func Capitalize(s string) string {
 //
 // 3(11) 左右都保留
 func Slice(s, start, end string, cut int) string {
-	st := strings.Index(s, start) + (cut>>1^1)*len(start)
-	sp := strings.LastIndex(s, end) + (cut&1)*len(end)
+	st := strings.Index(s, start)
+	sp := strings.LastIndex(s, end)
+	if st == -1 || sp == -1 {
+		return ""
+	}
+	st += (cut>>1 ^ 1) * len(start)
+	sp += (cut & 1) * len(end)
 	return s[st:sp]
 }
 
@@ -89,4 +93,20 @@ func Filter[T any](v []T, f func(T) bool) (r []T) {
 		}
 	}
 	return
+}
+
+// 条件遍历
+func ForEach[T any](v []T, f func(T), options ...func(T) bool) {
+	for _, o := range v {
+		permit := true
+		for _, option := range options {
+			if !option(o) {
+				permit = false
+				break
+			}
+		}
+		if permit {
+			f(o)
+		}
+	}
 }

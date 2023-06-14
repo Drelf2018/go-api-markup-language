@@ -35,13 +35,17 @@ type Api struct {
 func (api *Api) Add(token *Token) {
 	if token.Name == "url" {
 		api.Url = token.Value
-	} else if RequestTypes.Has(token.Name) {
+	} else if RequestTypes.Has(token.Name) && token.Value == "{" {
 		apiValue := reflect.ValueOf(*api)
 		key := Capitalize(token.Name)
 		value := apiValue.FieldByName(key).Interface().(Tokens)
 		api.position = &value
 	} else if token.Name == "}" {
-		api.position = &api.Info
+		if api.position != &api.Info {
+			api.position = &api.Info
+		} else {
+			api.position = nil
+		}
 	} else {
 		api.position.Add(token)
 	}
@@ -55,11 +59,11 @@ func NewApi(token *Token) *Api {
 		token.Hint,
 		token.Name,
 		token.Name,
-		make(Tokens),
-		make(Tokens),
-		make(Tokens),
-		make(Tokens),
-		make(Tokens),
+		MakeTokens(),
+		MakeTokens(),
+		MakeTokens(),
+		MakeTokens(),
+		MakeTokens(),
 		nil,
 	}
 	api.position = &api.Info
@@ -81,9 +85,10 @@ func (am *ApiManager) Done() {
 	if last := am.Api; last != nil {
 		am.Apis = append(am.Apis, last)
 		am.Output[last.Function] = last
-		if len(last.Info) == 0 {
+		if len(last.Info.Tokens) == 0 {
 			last.Anchor = ""
 		}
+		am.Api = nil
 	}
 }
 
