@@ -4,7 +4,7 @@ type query = {
 }
 
 type res<T> = {
-    num code: 返回码
+    num code: 返回码 = 0
     str message: 返回消息
     T data: 数据
 }
@@ -15,10 +15,9 @@ type userModal = {
 
 GET get_user_card: 用户名片信息 = {
     str url = https://api.bilibili.com/x/web-interface/card
-    query params = {
-        other = false
+    data = {
+        str uid
     }
-    res<userModal> response = {
-        str o = 你懂个破
-    }
+    query params
+    res<userModal> response
 }

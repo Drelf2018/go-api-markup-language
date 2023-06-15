@@ -68,6 +68,8 @@ func (types *Types) FindTokens(api string) (tokens []*Token) {
 }
 
 // 获取 Token
+//
+// 当 key 为基础类型(str num bool)时返回 nil
 func (types *Types) Get(key string) *Token {
 	return (*types)[key]
 }

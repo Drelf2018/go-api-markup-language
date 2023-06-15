@@ -3,42 +3,48 @@
         "url": "https://api.bilibili.com/x/web-interface/card",
         "method": "GET",
         "comment": "用户名片信息",
+        "data": {
+            "type": "dict",
+            "value": {
+                "uid": {
+                    "type": "str"
+                }
+            }
+        },
         "params": {
             "type": "query",
-            "values": {
+            "value": {
                 "mid": {
                     "type": "num",
                     "hint": "目标用户mid"
                 },
-                "other": {
-                    "type": "bool",
-                    "value": "false"
-                },
                 "photo": {
                     "type": "bool",
                     "hint": "是否请求用户主页头图",
-                    "value": "false"
+                    "value": false
                 }
             }
         },
         "response": {
             "type": "res",
-            "values": {
+            "value": {
                 "code": {
                     "type": "num",
-                    "hint": "返回码"
+                    "hint": "返回码",
+                    "value": 0
                 },
                 "data": {
                     "type": "userModal",
-                    "hint": "数据"
+                    "hint": "数据",
+                    "value": {
+                        "face": {
+                            "type": "str"
+                        }
+                    }
                 },
                 "message": {
                     "type": "str",
                     "hint": "返回消息"
-                },
-                "o": {
-                    "type": "str",
-                    "value": "你懂个破"
                 }
             }
         }

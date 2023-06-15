@@ -165,14 +165,28 @@ func IsNumber(v string) bool {
 }
 
 // 自动类型
-func AutoType(v string) string {
-	if v == "true" || v == "false" {
-		return "bool"
+func AutoType(k, v string) (typ string, val any) {
+	if k != "" && k != "auto" {
+		typ = k
+	} else if v == "true" || v == "false" {
+		typ = "bool"
 	} else if v == "{" {
-		return "dict"
+		typ = "dict"
 	} else if IsNumber(v) {
-		return "num"
+		typ = "num"
 	} else {
-		return "str"
+		typ = "str"
 	}
+	if v == "" {
+		return
+	}
+	switch typ {
+	case "bool":
+		val = v == "true"
+	case "num":
+		val, _ = strconv.ParseFloat(v, 64)
+	case "str":
+		val = v
+	}
+	return
 }

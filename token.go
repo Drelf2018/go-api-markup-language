@@ -12,22 +12,14 @@ import (
 //
 // 当该语句为字典时 Tokens 不为空 表示其下包含的语句
 type Token struct {
-	Type   string            `json:"type,omitempty"`
-	Name   string            `json:"-"`
-	Hint   string            `json:"hint,omitempty"`
-	Value  string            `json:"value,omitempty"`
-	Parent *Token            `json:"-"`
-	Args   []string          `json:"-"`
-	Tokens map[string]*Token `json:"values,omitempty"`
-	open   bool
-}
-
-// 去除参数的纯类型
-func (token *Token) PureType() string {
-	if t := Slice(token.Type, "", "<", 0); t != "" {
-		return t
-	}
-	return token.Type
+	Type      string            `json:"type,omitempty"`
+	Name      string            `json:"-"`
+	Hint      string            `json:"hint,omitempty"`
+	Value     string            `json:"-"`
+	TrueValue any               `json:"value,omitempty"`
+	Parent    *Token            `json:"-"`
+	Args      []string          `json:"-"`
+	Tokens    map[string]*Token `json:"-"`
 }
 
 // 判断该语句是否为 Api 起始语句
@@ -42,12 +34,12 @@ func (token *Token) IsType() bool {
 
 // 判断该语句是否为在变量类型内
 func (token *Token) InTypes() bool {
-	return VarTypes.Has(token.PureType())
+	return VarTypes.Has(token.Type)
 }
 
 // 判断该语句是否为起始括号
 func (token *Token) IsOpen() bool {
-	return token.open
+	return token.Value == "{"
 }
 
 // 判断该语句是否为闭合括号
@@ -103,6 +95,23 @@ func (token *Token) Pop(name string) *Token {
 	return nil
 }
 
+// 修改类型
+func (token *Token) SetValue(args []string) {
+	if tk := VarTypes.Get(token.Type); tk != nil {
+		argsMap := map[string]string{"str": "str", "num": "num", "bool": "bool"}
+		for i, arg := range tk.Args {
+			argsMap[arg] = args[i]
+		}
+		ForMap(
+			tk.Tokens,
+			func(s string, t *Token) { token.Tokens[s] = NewToken(argsMap[t.Type], t.Name, t.Hint, t.Value) },
+		)
+		token.TrueValue = token.Tokens
+	} else if token.IsOpen() {
+		token.TrueValue = token.Tokens
+	}
+}
+
 // 转字典
 func (token *Token) ToDict() map[string]string {
 	dic := make(map[string]string)
@@ -117,37 +126,16 @@ func (token *Token) ToDict() map[string]string {
 // data 顺序 Type Name Hint Value
 func NewToken(data ...string) *Token {
 	// 自动推断类型
-	typ := data[0]
-	val := data[3]
-	tokens := make(map[string]*Token)
-	if typ == "" || typ == "auto" {
-		typ = AutoType(val)
-	} else {
-		var as []string
-		typ, as = NameSlice(typ)
-		if token := VarTypes.Get(typ); token != nil {
-			tokens = token.Tokens
-			for i, a := range as {
-				ForMap(
-					tokens,
-					func(s string, t *Token) {
-						t.Type = a
-						// 这里还要替换值
-					},
-					func(s string, t *Token) bool { return t.Type == token.Args[i] },
-				)
-			}
-		}
-	}
-	if val == "{" {
-		val = ""
-	}
-
-	// 处理变量名及参数
+	typ, trueVal := AutoType(data[0], data[3])
+	// 解析类型中的参数
+	typ, params := NameSlice(typ)
+	// 解析变量名中的参数
 	name, args := NameSlice(data[1])
-
 	// 去除标注前后空白
 	hint := strings.Trim(data[2], " ")
 
-	return &Token{typ, name, hint, val, nil, args, tokens, data[3] == "{"}
+	token := Token{typ, name, hint, data[3], trueVal, nil, args, make(map[string]*Token)}
+	token.SetValue(params)
+
+	return &token
 }
