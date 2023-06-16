@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/Drelf2020/utils"
+	"gopkg.in/yaml.v2"
 )
 
 // 这垃圾语言怎么连 bool 异或都没有啊
@@ -68,7 +69,18 @@ func Slice(s, start, end string, cut int) string {
 func NameSlice(s string) (name string, args []string) {
 	name = strings.Split(s, "<")[0]
 	if text := Slice(s, "<", ">", 0); text != "" {
-		args = strings.Split(text, ",")
+		depth := 0
+		ForEach(
+			strings.Split(text, ","),
+			func(s string) {
+				if depth == 0 {
+					args = append(args, s)
+				} else {
+					args[len(args)-1] += "," + s
+				}
+				depth += strings.Count(s, "<") - strings.Count(s, ">")
+			},
+		)
 	}
 	return
 }
@@ -76,6 +88,13 @@ func NameSlice(s string) (name string, args []string) {
 // json 序列化
 func JsonDump(v any, indent string) string {
 	b, err := json.MarshalIndent(v, "", indent)
+	utils.PanicErr(err)
+	return string(b)
+}
+
+// yaml 序列化
+func YamlDump(v any) string {
+	b, err := yaml.Marshal(v)
 	utils.PanicErr(err)
 	return string(b)
 }

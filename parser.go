@@ -1,5 +1,9 @@
 package parser
 
+import "github.com/Drelf2020/utils"
+
+var log = utils.GetLog()
+
 // 从文件解析出 Api
 func GetApi(path string) (am *ApiManager) {
 	// 读文本

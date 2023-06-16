@@ -6,18 +6,24 @@ type query = {
 type res<T> = {
     num code: 返回码 = 0
     str message: 返回消息
+    num ttl = 1
     T data: 数据
 }
 
-type userModal = {
+type card = {
+    str mid
+    str name
     str face
+}
+
+type userInfo<T> = {
+    T card: 查询用户的信息
+    bool following: 是否关注
+    num follower: 粉丝数
 }
 
 GET get_user_card: 用户名片信息 = {
     str url = https://api.bilibili.com/x/web-interface/card
-    data = {
-        str uid
-    }
     query params
-    res<userModal> response
+    res<userInfo<card>> response
 }

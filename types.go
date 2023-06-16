@@ -29,8 +29,7 @@ func (types *Types) Has(key string) bool {
 }
 
 // 以字符串形式连接多个 type
-func (types *Types) Join() string {
-	keys := []string{}
+func (types *Types) Join(keys ...string) string {
 	for k := range *types {
 		keys = append(keys, k)
 	}
@@ -50,7 +49,7 @@ func (ts *Types) Union(typess ...*Types) *Types {
 
 // 生成正则表达式
 func (types *Types) ToRegexp() *regexp.Regexp {
-	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join() + `)?>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 }
 
 // 正则查找字符串

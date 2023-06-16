@@ -12,14 +12,14 @@ import (
 //
 // 当该语句为字典时 Tokens 不为空 表示其下包含的语句
 type Token struct {
-	Type      string            `json:"type,omitempty"`
-	Name      string            `json:"-"`
-	Hint      string            `json:"hint,omitempty"`
-	Value     string            `json:"-"`
-	TrueValue any               `json:"value,omitempty"`
-	Parent    *Token            `json:"-"`
-	Args      []string          `json:"-"`
-	Tokens    map[string]*Token `json:"-"`
+	Type   string            `json:"type,omitempty" yaml:"type,omitempty"`
+	Name   string            `json:"-" yaml:"-"`
+	Hint   string            `json:"hint,omitempty" yaml:"hint,omitempty"`
+	Value  string            `json:"-" yaml:"-"`
+	Output any               `json:"value,omitempty" yaml:"value,omitempty"`
+	Parent *Token            `json:"-" yaml:"-"`
+	Args   []string          `json:"-" yaml:"-"`
+	Tokens map[string]*Token `json:"-" yaml:"-"`
 }
 
 // 判断该语句是否为 Api 起始语句
@@ -98,6 +98,9 @@ func (token *Token) Pop(name string) *Token {
 // 修改类型
 func (token *Token) SetValue(args []string) {
 	if tk := VarTypes.Get(token.Type); tk != nil {
+		if len(args) != len(tk.Args) {
+			panic(token.Type + " 的参数个数都数歪来？")
+		}
 		argsMap := map[string]string{"str": "str", "num": "num", "bool": "bool"}
 		for i, arg := range tk.Args {
 			argsMap[arg] = args[i]
@@ -106,9 +109,9 @@ func (token *Token) SetValue(args []string) {
 			tk.Tokens,
 			func(s string, t *Token) { token.Tokens[s] = NewToken(argsMap[t.Type], t.Name, t.Hint, t.Value) },
 		)
-		token.TrueValue = token.Tokens
+		token.Output = token.Tokens
 	} else if token.IsOpen() {
-		token.TrueValue = token.Tokens
+		token.Output = token.Tokens
 	}
 }
 
