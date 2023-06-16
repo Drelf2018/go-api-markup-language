@@ -4,7 +4,7 @@
 
 ### 使用
 
-在 `tests` 目录下有文件 `user.api` 。
+在 `tests` 目录下有文件 `user.aml` 。
 
 ```api
 GET get_user_card: 用户名片信息 = {

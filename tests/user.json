@@ -4,14 +4,64 @@
         "method": "GET",
         "comment": "用户名片信息",
         "params": {
-            "mid": {
-                "type": "int",
-                "hint": "目标用户mid"
-            },
-            "photo": {
-                "type": "bool",
-                "hint": "是否请求用户主页头图",
-                "value": "false"
+            "type": "query",
+            "value": {
+                "mid": {
+                    "type": "num",
+                    "hint": "目标用户mid"
+                },
+                "photo": {
+                    "type": "bool",
+                    "hint": "是否请求用户主页头图",
+                    "value": false
+                }
+            }
+        },
+        "response": {
+            "type": "res",
+            "value": {
+                "code": {
+                    "type": "num",
+                    "hint": "返回码",
+                    "value": 0
+                },
+                "data": {
+                    "type": "userInfo",
+                    "hint": "数据",
+                    "value": {
+                        "card": {
+                            "type": "card",
+                            "hint": "查询用户的信息",
+                            "value": {
+                                "face": {
+                                    "type": "str"
+                                },
+                                "mid": {
+                                    "type": "str"
+                                },
+                                "name": {
+                                    "type": "str"
+                                }
+                            }
+                        },
+                        "follower": {
+                            "type": "num",
+                            "hint": "粉丝数"
+                        },
+                        "following": {
+                            "type": "bool",
+                            "hint": "是否关注"
+                        }
+                    }
+                },
+                "message": {
+                    "type": "str",
+                    "hint": "返回消息"
+                },
+                "ttl": {
+                    "type": "num",
+                    "value": 1
+                }
             }
         }
     }
