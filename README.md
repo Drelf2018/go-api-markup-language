@@ -2,64 +2,165 @@
 
 一种记录 Api 调用方式的文件格式的 golang 解析器。
 
-### 使用
+### 介绍
 
 在 `tests` 目录下有文件 `user.aml` 。
 
-```api
+```aml
+type query = {
+    num mid: 目标用户mid
+    bool photo: 是否请求用户主页头图 = false
+}
+
+type res<T> = {
+    num code: 返回码 = 0
+    str message: 返回消息
+    num ttl = 1
+    T data: 数据
+}
+
+type card = {
+    str mid
+    str name
+    str face
+}
+
+type userInfo<T> = {
+    T card: 查询用户的信息
+    bool following: 是否关注
+    num follower: 粉丝数
+}
+
 GET get_user_card: 用户名片信息 = {
-    url = https://api.bilibili.com/x/web-interface/card
-    params = {
-        int mid: 目标用户mid
-        bool photo: 是否请求用户主页头图 = false
-    }
+    str url = https://api.bilibili.com/x/web-interface/card
+    query params
+    res<userInfo<card>> response
 }
 ```
 
 这个文件的格式是：每行文本称为一个 `Token` 每个 `Token` 由四部分组成，分别为 `Type` `Name` `Hint` `Value` 。
 
-以第一行为例 `Type=GET` `Name=get_user_card` `Hint=用户名片信息` `Value={` 。
+```aml
+GET get_user_card: 用户名片信息 = {
+```
+
+以上面这行为例：`Type=GET` `Name=get_user_card` `Hint=用户名片信息` `Value={` 。
 
 这些参数只有 `Name` 是必须的，其他可以为空。
-例如 `params` 行 `Type=""` `Name=params` `Hint=""` `Value={` 。
 
-运行命令：
-
-```go
-go run tests\main.go
+```aml
+res<userInfo<card>> response
 ```
 
-可以得到 `user.json` `user.py` 文件，其中起主要作用的代码为：
+例如上面这行：`Type=res<userInfo<card>>` `Name=response` `Hint=""` `Value=""` 。
 
-```go
-// 读取并解析 user.api
-am := parser.GetApi("./tests/user.api")
-// 输出为 .json 文件
-am.ToJson("./tests/user.json")
-// 输出配套的 .py 文件
-translator.ToPython(am, "./tests/user.json")
+### 编写接口
+
+```aml
+GET get_user_card: 用户名片信息 = {
+    str url = https://api.bilibili.com/x/web-interface/card
+    query params
+    res<userInfo<card>> response
+    notice = 使用函数的注意事项
+}
 ```
 
-于是我们在 `user.py` 中得到这样的代码：
+使用 `GET` 或 `POST` 作为 `Type` 来定义一个 Api 接口，其后的 `get_user_card: 用户名片信息` 是用来导出代码时会用到的函数名和注释。
+
+接口必须使用大括号包裹 `url` 子语句，表示这个接口的地址。其他的子语句是可选的，例如 `params` 和 `response` 。
+
+一些与网络请求相关的字段被称为特殊字段，包含 `url` `data` `params` `headers` `cookies` `response` 。
+
+除此之外都是普通字段，他们也会被导出至 `.json` 或 `.yml` 文件中，但可能不会导出到代码中。
+
+例如上面的 `notice` 字段，注意到该字段并没有显式记录类型，因此内部会根据其初始值判断类型为 `str` 。
+
+```diff
+- notice = 使用函数的注意事项
++ auto notice = 使用函数的注意事项
+```
+
+你也可以通过设置类型为 `auto` 达到同样的效果。
+
+### 神奇的类型
+
+你可能到了，上述格式中出现了非标准 `json` 类型（指 `str` `num` `bool`）
+
+```aml
+query params
+res<userInfo<card>> response
+```
+
+这里的 `query` 和 `res<userInfo<card>>` 是什么鬼啊？
+
+```aml
+type query = {
+    num mid: 目标用户mid
+    bool photo: 是否请求用户主页头图 = false
+}
+```
+
+找到 `query` 的定义处，我们使用 `type` 关键字定义了这个类型，他的值是一个字典。这样我们就可以在**后续**语句中复用这个类型了。
+
+```diff
+- params = {
+-     num mid: 目标用户mid
+-     bool photo: 是否请求用户主页头图 = false
+- }
++ query params
+```
+
+你可能也注意到了，上述语句中出现了含有尖括号 `<>` 的类型。没错，这就是传参方式。
+
+```aml
+type res<T> = {
+    num code: 返回码 = 0
+    str message: 返回消息
+    num ttl = 1
+    T data: 数据
+}
+```
+
+找到 `res` 的定义处，我们使用 `<>` 和其中的任意字符表示参数，这个参数名可用于其内部语句的类型处。
+
+当 `res<userInfo<card>> response` 使用时，`response` 会被解析为：
+
+```aml
+response = {
+    num code: 返回码 = 0
+    str message: 返回消息
+    num ttl = 1
+    userInfo<card> data: 数据
+}
+```
+
+参数可以多个，用 `,` 分隔，也就是 `type res<T1,T2> = xxx` 和 `res<a,b> response`
+
+### 值有什么用
+
+前文提到，每条语句的 `Value` 项并不是必须的，那么写值有什么用呢？目的是方便导出：
+
+```aml
+params = {
+    num mid: 目标用户mid
+    bool photo: 是否请求用户主页头图 = false
+}
+```
+
+被导出至 `python` 代码时：
 
 ```python
-def get_user_card(mid: int, photo: bool = False):
+async def get_user_card(mid: int, photo: bool = False):
     """
     用户名片信息
-
-    Args:
-        photo (bool): 是否请求用户主页头图
-
-        mid (int): 目标用户mid
-
     """
-    api = Api(**API["get_user_card"])
-    api.update(photo=photo, mid=mid)
-    return api.request()
-
-# 尝试 print(get_user_card(2))
+    pass  # 以下省略
 ```
 
-这就是自动生成的调用 `user.api` 中接口的 `Python` 代码。
+可以发现，值的有无与函数参数中默认值有无是一致的。
+
+如果有一个字段是固定某个值，而我又不希望导出的代码中可以在调用函数时可以修改它，可以在值的后面加上 `,constant`
+
+### 最后
 
 ~~之后会支持别的语言大概~~
