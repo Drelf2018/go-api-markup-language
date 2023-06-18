@@ -1,5 +1,7 @@
 github.com/Drelf2020/utils v0.0.0-20230607154600-81f716f9cf0e h1:G7dCyVezA/Wec/1EtDLUyq4Jd72n+rX3/ty/ihbPEWA=
 github.com/Drelf2020/utils v0.0.0-20230607154600-81f716f9cf0e/go.mod h1:kvfDpo8jArhg++N7fyE6ynH1VrhngX0HFfQrMBE1Gbs=
+github.com/Drelf2020/utils v0.0.0-20230617054513-1c11ad3f45e9 h1:zniO9Ba/VSYz5Ki3pPchDSmXauY+rj1+Uyf9gj0B2Xg=
+github.com/Drelf2020/utils v0.0.0-20230617054513-1c11ad3f45e9/go.mod h1:kvfDpo8jArhg++N7fyE6ynH1VrhngX0HFfQrMBE1Gbs=
 github.com/antonfisher/nested-logrus-formatter v1.3.1 h1:NFJIr+pzwv5QLHTPyKz9UMEoHck02Q9L0FP13b/xSbQ=
 github.com/antonfisher/nested-logrus-formatter v1.3.1/go.mod h1:6WTfyWFkBc9+zyBaKIqRrg/KwMqBbodBjgbHjDz7zjA=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=

@@ -1,11 +1,11 @@
 from api import get_api, parse_api
 
-API = get_api("{path}")
+API = get_api("path")
 # loop
 
 async def demo(args):
     """
-    {hint}
+    hint
     """
     api = parse_api(API["demo"])
     return await api.update().result

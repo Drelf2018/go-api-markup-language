@@ -1,19 +1,10 @@
-type query = {
-    num mid: 目标用户mid
-    bool photo: 是否请求用户主页头图 = false
-}
+from lib import *
 
 type res<T> = {
     num code: 返回码 = 0
     str message: 返回消息
     num ttl = 1
     T data: 数据
-}
-
-type card = {
-    str mid
-    str name
-    str face
 }
 
 type userInfo<T> = {
@@ -23,7 +14,8 @@ type userInfo<T> = {
 }
 
 GET get_user_card: 用户名片信息 = {
-    str url = https://api.bilibili.com/x/web-interface/card
+    str url = "https://api.bilibili.com/x
+/web-interface/card"
     query params
     res<userInfo<card>> response
 }

@@ -38,13 +38,16 @@ func (types *Types) Join(keys ...string) string {
 
 // 合并多个类型组
 func (ts *Types) Union(typess ...*Types) *Types {
-	nt := *ts
+	nt := NewTypes()
+	for k, v := range *ts {
+		nt.Add(v, k)
+	}
 	for _, types := range typess {
 		for k, v := range *types {
 			nt.Add(v, k)
 		}
 	}
-	return &nt
+	return nt
 }
 
 // 生成正则表达式
@@ -52,16 +55,11 @@ func (types *Types) ToRegexp() *regexp.Regexp {
 	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 }
 
-// 正则查找字符串
-func (types *Types) FindStrings(api string) [][]string {
-	return types.ToRegexp().FindAllStringSubmatch(api, -1)
-}
-
 // 正则查找语句
 func (types *Types) FindTokens(api string) (tokens []*Token) {
 	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
-		tokens = append(tokens, NewToken(sList[1:]...))
+		tokens = append(tokens, NewToken(sList...))
 	}
 	return
 }
@@ -79,9 +77,6 @@ func NewTypes(keys ...string) *Types {
 	types.Add(nil, keys...)
 	return &types
 }
-
-// 支持的变量类型 auto str num bool
-var VarTypes = NewTypes("type", "auto", "str", "num", "bool")
 
 // 支持的请求类型 GET POST
 var MethodTypes = NewTypes("GET", "POST")

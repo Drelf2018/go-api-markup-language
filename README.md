@@ -136,6 +136,42 @@ response = {
 
 参数可以多个，用 `,` 分隔，也就是 `type res<T1,T2> = xxx` 和 `res<a,b> response`
 
+### 导入类型
+
+```aml
+# lib.aml
+type query = {
+    num mid: 目标用户mid
+    bool photo: 是否请求用户主页头图 = false
+}
+
+type card = {
+    str mid
+    str name
+    str face
+}
+```
+
+```aml
+# user.aml
+from lib import query, card
+
+...
+
+GET get_user_card: 用户名片信息 = {
+    str url = https://api.bilibili.com/x/web-interface/card
+    query params
+    res<userInfo<card>> response
+}
+```
+
+导入别的文件里的类型就这么简单，然后可以用 `*` 导入全部类型：
+
+```diff
+- from lib import query, card
++ from lib import *
+```
+
 ### 值有什么用
 
 前文提到，每条语句的 `Value` 项并不是必须的，那么写值有什么用呢？目的是方便导出：
@@ -160,6 +196,21 @@ async def get_user_card(mid: int, photo: bool = False):
 可以发现，值的有无与函数参数中默认值有无是一致的。
 
 如果有一个字段是固定某个值，而我又不希望导出的代码中可以在调用函数时可以修改它，可以在值的后面加上 `,constant`
+
+### 多行文本
+
+当值需要写多行时，可以使用 `"` `'` 等包裹文本：
+
+```aml
+GET get_user_card: 用户名片信息 = {
+    str url = "https://api.bilibili.com/x/
+web-interface/card"
+}
+```
+
+这会被解析成 `url = https://api.bilibili.com/x/web-interface/card` 。
+
+注意，拼接后的字符串没有换行符。
 
 ### 最后
 

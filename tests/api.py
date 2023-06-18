@@ -18,7 +18,7 @@ async def get_session() -> httpx.AsyncClient:
 
 
 def new_dict(dic: Dict[str, dict]) -> Dict[str, str]:
-    return {k: v.get("value", "").replace(",constant", "") for k, v in dic.items()}
+    return {k: v.get("value", "") for k, v in dic.items()}
 
 
 @dataclass
@@ -37,10 +37,10 @@ class Api:
 
     def __post_init__(self):
         self.method = self.method.upper()
-        self._data = new_dict(self.data)
-        self._params = new_dict(self.params)
-        self._headers = new_dict(self.headers)
-        self._cookies = new_dict(self.cookies)
+        self._data = new_dict(self.data.get("value", {}))
+        self._params = new_dict(self.params.get("value", {}))
+        self._headers = new_dict(self.headers.get("value", {}))
+        self._cookies = new_dict(self.cookies.get("value", {}))
         self.__result = None
 
     @property
@@ -78,21 +78,23 @@ class Api:
             return self.update_data(**kwargs)
 
 
-def get_api(path: str):
-    """
-    获取 api 列表
-    """
-    with open(path, "r", encoding="utf-8") as fp:
-        return json.load(fp)
+KEYS = Api("", "").__dict__.keys()
 
 
 def parse_api(api: Dict[str, str | dict]):
     """
     解析 api
     """
-    keys = Api("", "").__dict__.keys()
     info = {}
     for k in list(api.keys()):
-        if k not in keys:
+        if k not in KEYS:
             info[k] = api.pop(k)
     return Api(info=info, **api)
+
+
+def get_api(path: str):
+    """
+    获取 api 列表
+    """
+    with open(path, "r", encoding="utf-8") as fp:
+        return json.load(fp)

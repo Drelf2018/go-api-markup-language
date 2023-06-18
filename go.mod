@@ -3,7 +3,7 @@ module github.com/Drelf2018/go-bilibili-api
 go 1.20
 
 require (
-	github.com/Drelf2020/utils v0.0.0-20230607154600-81f716f9cf0e
+	github.com/Drelf2020/utils v0.0.0-20230617054513-1c11ad3f45e9
 	gopkg.in/yaml.v2 v2.4.0
 )
 

@@ -14,6 +14,10 @@
                     "type": "bool",
                     "hint": "是否请求用户主页头图",
                     "value": false
+                },
+                "test": {
+                    "type": "num",
+                    "value": 0
                 }
             }
         },

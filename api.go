@@ -2,6 +2,8 @@ package parser
 
 import (
 	"strings"
+
+	"github.com/Drelf2020/utils"
 )
 
 // 请求任务
@@ -30,6 +32,12 @@ type Api struct {
 
 // 构造函数
 func NewApi(token *Token) *Api {
+	utils.ForMap(
+		token.Tokens,
+		func(s string, t *Token) { token.Pop(s) },
+		func(s string, t *Token) bool { return t.Value == "" },
+		func(s string, t *Token) bool { return t.Output == nil },
+	)
 	return &Api{
 		token.Pop("url").Value,
 		token.Type,
@@ -49,9 +57,12 @@ func NewApi(token *Token) *Api {
 // Apis: 已经解析完成的任务
 //
 // Output: 用来输出 json/yml 的字典
+//
+// Vartypes: 支持的变量类型 auto str num bool
 type ApiManager struct {
-	Apis   []*Api
-	Output map[string]*Api
+	Apis     []*Api
+	Output   map[string]*Api
+	VarTypes *Types
 }
 
 // 添加新 api
@@ -67,21 +78,21 @@ func (am *ApiManager) Add(token *Token) {
 // 解析为 json
 func (am *ApiManager) ToJson(path string) error {
 	output := JsonDump(am.Output, "    ")
-	ForMap(
+	utils.ForMap(
 		am.Output,
 		func(s string, a *Api) {
 			info := JsonDump(a.Info.ToDict(), "        ")
-			output = strings.Replace(output, "\"function\": \""+s+"\"", Slice(info, "\"", "\"", 3), 1)
+			output = strings.Replace(output, "\"function\": \""+s+"\"", utils.Slice(info, "\"", "\"", 3), 1)
 		},
 		func(s string, a *Api) bool { return a.Function != "" },
 	)
-	return WriteFile(path, output)
+	return utils.WriteFile(path, output)
 }
 
 // 解析为 yml
 func (am *ApiManager) ToYaml(path string) error {
 	output := YamlDump(am.Output)
-	ForMap(
+	utils.ForMap(
 		am.Output,
 		func(s string, a *Api) {
 			info := YamlDump(map[string]map[string]string{"info": a.Info.ToDict()})
@@ -89,7 +100,7 @@ func (am *ApiManager) ToYaml(path string) error {
 		},
 		func(s string, a *Api) bool { return a.Function != "" },
 	)
-	return WriteFile(path, output)
+	return utils.WriteFile(path, output)
 }
 
 // 构造函数
@@ -97,5 +108,6 @@ func NewApiManager() *ApiManager {
 	return &ApiManager{
 		make([]*Api, 0),
 		make(map[string]*Api),
+		NewTypes("type", "auto", "str", "num", "bool"),
 	}
 }
