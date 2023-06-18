@@ -32,12 +32,6 @@ type Api struct {
 
 // 构造函数
 func NewApi(token *Token) *Api {
-	utils.ForMap(
-		token.Tokens,
-		func(s string, t *Token) { token.Pop(s) },
-		func(s string, t *Token) bool { return t.Value == "" },
-		func(s string, t *Token) bool { return t.Output == nil },
-	)
 	return &Api{
 		token.Pop("url").Value,
 		token.Type,

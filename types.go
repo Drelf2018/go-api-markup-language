@@ -52,14 +52,14 @@ func (ts *Types) Union(typess ...*Types) *Types {
 
 // 生成正则表达式
 func (types *Types) ToRegexp() *regexp.Regexp {
-	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n^ ]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 }
 
 // 正则查找语句
 func (types *Types) FindTokens(api string) (tokens []*Token) {
 	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
-		tokens = append(tokens, NewToken(sList...))
+		tokens = append(tokens, NewToken(sList[1:]...))
 	}
 	return
 }

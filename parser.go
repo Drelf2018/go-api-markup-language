@@ -45,9 +45,6 @@ func GetApi(path string) (am *ApiManager) {
 		},
 	)
 
-	// 这个不能放解析导入前面
-	apiText = NewText(api)
-
 	// 预处理 保存所有自定义类型名
 	utils.ForEach(
 		am.VarTypes.FindTokens(api),
@@ -59,6 +56,7 @@ func GetApi(path string) (am *ApiManager) {
 	)
 
 	// 解析 Api 以及解析所有类型 包括自定义的
+	chn := ""
 	token := new(Token)
 	utils.ForEach(
 		am.VarTypes.Union(MethodTypes).FindTokens(api),
@@ -73,6 +71,16 @@ func GetApi(path string) (am *ApiManager) {
 					am.Add(token)
 				}
 				token = token.Parent
+			} else if chn != "" {
+				token.Value += t.Name
+				if t.HasQuotation(chn) {
+					token.Value = utils.Slice(token.Value, chn, chn, 0)
+					token = token.Parent
+					chn = ""
+				}
+			} else if chn = t.IsMultiLine(); chn != "" {
+				token.Add(t)
+				token = t
 			} else if token != nil {
 				token.Add(t)
 				if t.IsOpen() {

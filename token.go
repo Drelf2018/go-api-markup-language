@@ -43,6 +43,22 @@ func (token *Token) IsClose() bool {
 	return token.Name == "}"
 }
 
+// 判断是否为多行文本
+func (token *Token) IsMultiLine() string {
+	if len(token.Value) < 1 {
+		return ""
+	}
+	if chn := token.Value[:1]; In([]string{"\"", "'", "`"}, chn) {
+		return chn
+	}
+	return ""
+}
+
+// 判断是否有引号
+func (token *Token) HasQuotation(chn string) bool {
+	return strings.Count(token.Name, chn) == 1
+}
+
 // 判断该语句是否为必要变量
 func (token *Token) IsRequired() bool {
 	return token.Value == ""
@@ -93,7 +109,7 @@ func (token *Token) SetTypes(vt *Types) *Token {
 		utils.ForMap(
 			tk.Tokens,
 			func(s string, t *Token) {
-				token.Tokens[s] = NewToken("", argsMap[t.Type], t.Name, t.Hint, t.Value).SetTypes(vt)
+				token.Tokens[s] = NewToken(argsMap[t.Type], t.Name, t.Hint, t.Value).SetTypes(vt)
 			},
 		)
 		token.Output = token.Tokens
@@ -107,24 +123,14 @@ func (token *Token) SetTypes(vt *Types) *Token {
 //
 // data 顺序 Sentence Type Name Hint Value
 func NewToken(data ...string) *Token {
-	// 多行文本
-	value := data[4]
-	if data[0] != "" && value != "" {
-		utils.ForEach(
-			[]string{"\"", "'", "`"},
-			func(s string) { value = apiText.Accumulate(data[0], s) },
-			func(s string) bool { return utils.Startswith(value, s) },
-		)
-	}
-
 	// 自动推断类型
-	typ, output := utils.AutoType(data[1], data[4])
+	typ, output := utils.AutoType(data[0], data[3])
 	// 解析类型中的参数
 	typ, params := NameSlice(typ)
 	// 解析变量名中的参数
-	name, args := NameSlice(data[2])
+	name, args := NameSlice(strings.TrimSpace(data[1]))
 	// 去除标注前后空白
-	hint := strings.TrimSpace(data[3])
+	hint := strings.TrimSpace(data[2])
 
-	return &Token{typ, name, hint, value, output, nil, args, params, make(map[string]*Token)}
+	return &Token{typ, name, hint, data[3], output, nil, args, params, make(map[string]*Token)}
 }
