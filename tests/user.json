@@ -55,6 +55,11 @@
                         "following": {
                             "type": "bool",
                             "hint": "是否关注"
+                        },
+                        "media": {
+                            "type": "enu",
+                            "hint": "媒体",
+                            "value": "1"
                         }
                     }
                 },

@@ -10,6 +10,6 @@ var log = utils.GetLog()
 
 func main() {
 	am := parser.GetApi("./tests/user.aml")
-	utils.ForMap(am.Output, func(s string, a *parser.Api) { log.Debug(s, " | ", *a) })
+	utils.ForMap(am.Output, func(s string, a *parser.Api) { log.Info(s, " | ", *a) })
 	translator.ToPython(am, "./tests/", "user")
 }

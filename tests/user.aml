@@ -1,5 +1,10 @@
 from lib import *
 
+enum enu = {
+    video = 1
+    audio = 2
+}
+
 type res<T> = {
     num code: 返回码 = 0
     str message: 返回消息
@@ -11,6 +16,7 @@ type userInfo<T> = {
     T card: 查询用户的信息
     bool following: 是否关注
     num follower: 粉丝数
+    enu media: 媒体 = video
 }
 
 GET get_user_card: 用户名片信息 = {

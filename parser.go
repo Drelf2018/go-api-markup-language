@@ -52,7 +52,7 @@ func GetApi(path string) (am *ApiManager) {
 			utils.ForEach(t.Args, func(s string) { am.VarTypes.Add(nil, s) })
 			am.VarTypes.Add(t)
 		},
-		func(t *Token) bool { return t.IsType() },
+		func(t *Token) bool { return t.IsType() || t.IsEnum() },
 	)
 
 	// 解析 Api 以及解析所有类型 包括自定义的
@@ -62,7 +62,7 @@ func GetApi(path string) (am *ApiManager) {
 		am.VarTypes.Union(MethodTypes).FindTokens(api),
 		func(t *Token) {
 			t.SetTypes(am.VarTypes)
-			if t.IsType() && t.IsOpen() {
+			if (t.IsType() || t.IsEnum()) && t.IsOpen() {
 				token = am.VarTypes.Get(t.Name)
 			} else if t.IsApi() {
 				token = t

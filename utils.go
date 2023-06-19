@@ -46,3 +46,28 @@ func YamlDump(v any) string {
 func In[T string](ls []T, v T) bool {
 	return len(utils.Filter[T](ls, func(t T) bool { return t == v })) != 0
 }
+
+type Dict map[string]string
+
+func (dict Dict) Get(key, value string) string {
+	v, ok := dict[key]
+	if ok {
+		return v
+	}
+	return value
+}
+
+func (dict Dict) Same(key string) string {
+	return dict.Get(key, key)
+}
+
+func NewDict(l1, l2 []string, errMsg string) (dict Dict) {
+	if len(l1) != len(l2) {
+		panic(errMsg)
+	}
+	dict = make(Dict)
+	for i, arg := range l1 {
+		dict[arg] = l2[i]
+	}
+	return
+}

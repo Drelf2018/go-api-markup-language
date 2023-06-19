@@ -33,6 +33,11 @@ func (token *Token) IsType() bool {
 	return token.Type == "type"
 }
 
+// 判断该语句是否为枚举
+func (token *Token) IsEnum() bool {
+	return token.Type == "enum"
+}
+
 // 判断该语句是否为起始括号
 func (token *Token) IsOpen() bool {
 	return token.Value == "{"
@@ -80,9 +85,14 @@ func (token *Token) Add(t *Token) {
 	token.Tokens[t.Name] = t
 }
 
+// 获取子语句
+func (token *Token) Get(name string) *Token {
+	return token.Tokens[name]
+}
+
 // 移除子语句
 func (token *Token) Pop(name string) *Token {
-	if v, ok := token.Tokens[name]; ok {
+	if v := token.Get(name); v != nil {
 		delete(token.Tokens, name)
 		return v
 	}
@@ -96,27 +106,36 @@ func (token *Token) ToDict() map[string]string {
 	return dic
 }
 
+// 复制
+func (token *Token) Copy(nt string, vt *Types) *Token {
+	t := NewToken(nt, token.Name, token.Hint, token.Value)
+	t.SetTypes(vt)
+	return t
+}
+
 // 修改类型
-func (token *Token) SetTypes(vt *Types) *Token {
-	if tk := vt.Get(token.Type); tk != nil {
-		if len(token.Params) != len(tk.Args) {
-			panic(token.Type + " 的参数个数都数歪来？")
+func (token *Token) SetTypes(vt *Types) {
+	tk := vt.Get(token.Type)
+
+	// 基础类型 不做修改 输出原值
+	if tk == nil {
+		// 有子语句(dict) 替换输出为子语句集合
+		if token.IsOpen() {
+			token.Output = token.Tokens
 		}
-		argsMap := map[string]string{"str": "str", "num": "num", "bool": "bool"}
-		for i, arg := range tk.Args {
-			argsMap[arg] = token.Params[i]
-		}
-		utils.ForMap(
-			tk.Tokens,
-			func(s string, t *Token) {
-				token.Tokens[s] = NewToken(argsMap[t.Type], t.Name, t.Hint, t.Value).SetTypes(vt)
-			},
-		)
-		token.Output = token.Tokens
-	} else if token.IsOpen() {
-		token.Output = token.Tokens
+		return
 	}
-	return token
+
+	// 枚举 替换输出为具体值
+	if tk.IsEnum() {
+		token.Output = tk.Get(token.Value).Value
+		return
+	}
+
+	// 自定义类型
+	argsMap := NewDict(tk.Args, token.Params, token.Type+" 的参数个数都能数歪来？")
+	utils.ForMap(tk.Tokens, func(s string, t *Token) { token.Tokens[s] = t.Copy(argsMap.Same(t.Type), vt) })
+	token.Output = token.Tokens
 }
 
 // 解析类似 res<T1,T2> 中的子类型 T1 T2

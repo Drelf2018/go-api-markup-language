@@ -102,6 +102,6 @@ func NewApiManager() *ApiManager {
 	return &ApiManager{
 		make([]*Api, 0),
 		make(map[string]*Api),
-		NewTypes("type", "auto", "str", "num", "bool"),
+		NewTypes("type", "enum", "auto", "str", "num", "bool"),
 	}
 }

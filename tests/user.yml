@@ -42,6 +42,10 @@ get_user_card:
           following:
             type: bool
             hint: 是否关注
+          media:
+            type: enu
+            hint: 媒体
+            value: "1"
       message:
         type: str
         hint: 返回消息
