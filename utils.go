@@ -16,6 +16,7 @@ func NameSlice(s string) (name string, args []string) {
 		utils.ForEach(
 			strings.Split(text, ","),
 			func(s string) {
+				s = strings.TrimSpace(s)
 				if depth == 0 {
 					args = append(args, s)
 				} else {
@@ -43,31 +44,6 @@ func YamlDump(v any) string {
 }
 
 // python list in
-func In[T string](ls []T, v T) bool {
-	return len(utils.Filter[T](ls, func(t T) bool { return t == v })) != 0
-}
-
-type Dict map[string]string
-
-func (dict Dict) Get(key, value string) string {
-	v, ok := dict[key]
-	if ok {
-		return v
-	}
-	return value
-}
-
-func (dict Dict) Same(key string) string {
-	return dict.Get(key, key)
-}
-
-func NewDict(l1, l2 []string, errMsg string) (dict Dict) {
-	if len(l1) != len(l2) {
-		panic(errMsg)
-	}
-	dict = make(Dict)
-	for i, arg := range l1 {
-		dict[arg] = l2[i]
-	}
-	return
+func In(ls []string, v string) bool {
+	return len(utils.Filter(ls, func(t string) bool { return t == v })) != 0
 }

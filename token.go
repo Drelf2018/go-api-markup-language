@@ -133,7 +133,7 @@ func (token *Token) SetTypes(vt *Types) {
 	}
 
 	// 自定义类型
-	argsMap := NewDict(tk.Args, token.Params, token.Type+" 的参数个数都能数歪来？")
+	argsMap := NewZip(tk.Args, token.Params, token.Type+" 的参数个数都能数歪来？")
 	utils.ForMap(tk.Tokens, func(s string, t *Token) { token.Tokens[s] = t.Copy(argsMap.Same(t.Type), vt) })
 	token.Output = token.Tokens
 }

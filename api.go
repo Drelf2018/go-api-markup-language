@@ -61,6 +61,9 @@ type ApiManager struct {
 
 // 添加新 api
 func (am *ApiManager) Add(token *Token) {
+	if !token.IsApi() {
+		return
+	}
 	api := NewApi(token)
 	am.Apis = append(am.Apis, api)
 	am.Output[api.Function] = api

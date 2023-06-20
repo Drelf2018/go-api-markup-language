@@ -10,11 +10,6 @@ import (
 
 var log = utils.GetLog()
 
-// 获取 import 语句
-func GetImport(api string) [][]string {
-	return regexp.MustCompile(`from +([^ ]+) +import +([\w, *]+)`).FindAllStringSubmatch(api, -1)
-}
-
 // 从文件解析出 Api
 func GetApi(path string) (am *ApiManager) {
 	am = NewApiManager()
@@ -24,23 +19,14 @@ func GetApi(path string) (am *ApiManager) {
 	// 预处理 获取 import 导入的类型
 	dir := filepath.Dir(path)
 	utils.ForEach(
-		GetImport(api),
+		regexp.MustCompile(`from +([^ ]+) +import +([\w, *]+)`).FindAllStringSubmatch(api, -1),
 		func(s []string) {
+			i := NewInclude(s)
 			api = strings.ReplaceAll(api, s[0], "")
-			ipath, types := s[1], s[2]
-			// 想加个 @ 的语法糖的
-			// if utils.Startswith(ipath, "@") {
-			// }
-			ipath = filepath.Join(dir, strings.ReplaceAll(ipath, ".", "/")) + ".aml"
-			args := strings.Split(types, ",")
-			for i, a := range args {
-				args[i] = strings.TrimSpace(a)
-			}
 			utils.ForMap(
-				*GetApi(ipath).VarTypes,
+				*GetApi(i.ToApi(dir)).VarTypes,
 				func(s string, t *Token) { am.VarTypes.Add(t) },
-				func(s string, t *Token) bool { return t != nil },
-				func(s string, t *Token) bool { return args[0] == "*" || In(args, s) },
+				func(s string, t *Token) bool { return t != nil && i.Need(s) },
 			)
 		},
 	)
@@ -48,46 +34,62 @@ func GetApi(path string) (am *ApiManager) {
 	// 预处理 保存所有自定义类型名
 	utils.ForEach(
 		am.VarTypes.FindTokens(api),
-		func(t *Token) {
-			utils.ForEach(t.Args, func(s string) { am.VarTypes.Add(nil, s) })
-			am.VarTypes.Add(t)
-		},
+		func(t *Token) { am.VarTypes.Add(t, t.Args...) },
 		func(t *Token) bool { return t.IsType() || t.IsEnum() },
 	)
 
 	// 解析 Api 以及解析所有类型 包括自定义的
-	chn := ""
-	token := new(Token)
-	utils.ForEach(
-		am.VarTypes.Union(MethodTypes).FindTokens(api),
-		func(t *Token) {
-			t.SetTypes(am.VarTypes)
-			if (t.IsType() || t.IsEnum()) && t.IsOpen() {
-				token = am.VarTypes.Get(t.Name)
-			} else if t.IsApi() {
-				token = t
-			} else if t.IsClose() {
-				if token.IsApi() {
-					am.Add(token)
-				}
-				token = token.Parent
-			} else if chn != "" {
-				token.Value += t.Name
-				if t.HasQuotation(chn) {
-					token.Value = utils.Slice(token.Value, chn, chn, 0)
-					token = token.Parent
-					chn = ""
-				}
-			} else if chn = t.IsMultiLine(); chn != "" {
-				token.Add(t)
-				token = t
-			} else if token != nil {
-				token.Add(t)
-				if t.IsOpen() {
-					token = t
-				}
+	type Cache struct {
+		parent *Token
+		chn    string
+	}
+	hd := NewHandler[*Token, *Cache](&Cache{new(Token), ""})
+
+	// 预处理 更新类型
+	hd.Add(func(t *Token, c *Cache) bool { t.SetTypes(am.VarTypes); return false }, nil)
+
+	// 判断是否是定义类型或定义枚举
+	hd.Add(
+		func(t *Token, c *Cache) bool { return (t.IsType() || t.IsEnum()) && t.IsOpen() },
+		func(t *Token, c *Cache) { c.parent = am.VarTypes.Get(t.Name) },
+	)
+
+	// 判断是否是 Api
+	hd.Add(
+		func(t *Token, c *Cache) bool { return t.IsApi() },
+		func(t *Token, c *Cache) { c.parent = t },
+	)
+
+	// 判断是否闭合该层
+	// 如果闭合的是 Api 层还要添加进 ApiManager
+	hd.Add(
+		func(t *Token, c *Cache) bool { return t.IsClose() },
+		func(t *Token, c *Cache) { am.Add(c.parent); c.parent = c.parent.Parent },
+	)
+
+	// chn 不为空时把当前语句作为字符串加进上一个多行文本语句的 Value 里
+	hd.Add(
+		func(t *Token, c *Cache) bool { return c.chn != "" },
+		func(t *Token, c *Cache) {
+			c.parent.Value += t.Name
+			if t.HasQuotation(c.chn) {
+				c.parent.Value = utils.Slice(c.parent.Value, c.chn, c.chn, 0)
+				c.parent = c.parent.Parent
+				c.chn = ""
 			}
 		},
 	)
+
+	// 判断是否是多行文本 或者有左大括号
+	hd.Add(
+		func(t *Token, c *Cache) bool {
+			c.chn = t.IsMultiLine()
+			c.parent.Add(t)
+			return c.chn != "" || t.IsOpen()
+		},
+		func(t *Token, c *Cache) { c.parent = t },
+	)
+
+	utils.ForEach(am.VarTypes.Union(MethodTypes).FindTokens(api), hd.Do)
 	return
 }
