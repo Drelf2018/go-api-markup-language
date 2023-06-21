@@ -45,12 +45,20 @@ func GetApi(path string) (am *ApiManager) {
 	}
 	hd := NewHandler[*Token, *Cache](&Cache{new(Token), ""})
 
-	// 预处理 更新类型
-	hd.Add(func(t *Token, c *Cache) bool { t.SetTypes(am.VarTypes); return false }, nil)
+	// 预处理
+	// 父语句是列表则翻转类型和变量
+	// 否则更新类型
+	hd.Prepare(func(t *Token, c *Cache) {
+		if c.parent != nil && c.parent.IsBracket() {
+			*t = *t.Exchange(am.VarTypes)
+		} else {
+			t.SetTypes(am.VarTypes)
+		}
+	})
 
 	// 判断是否是定义类型或定义枚举
 	hd.Add(
-		func(t *Token, c *Cache) bool { return (t.IsType() || t.IsEnum()) && t.IsOpen() },
+		func(t *Token, c *Cache) bool { return (t.IsType() || t.IsEnum()) && (t.IsOpen() || t.IsBracket()) },
 		func(t *Token, c *Cache) { c.parent = am.VarTypes.Get(t.Name) },
 	)
 
@@ -64,7 +72,12 @@ func GetApi(path string) (am *ApiManager) {
 	// 如果闭合的是 Api 层还要添加进 ApiManager
 	hd.Add(
 		func(t *Token, c *Cache) bool { return t.IsClose() },
-		func(t *Token, c *Cache) { am.Add(c.parent); c.parent = c.parent.Parent },
+		func(t *Token, c *Cache) {
+			if c.parent.IsApi() {
+				am.Add(c.parent)
+			}
+			c.parent = c.parent.Parent
+		},
 	)
 
 	// chn 不为空时把当前语句作为字符串加进上一个多行文本语句的 Value 里
@@ -80,12 +93,12 @@ func GetApi(path string) (am *ApiManager) {
 		},
 	)
 
-	// 判断是否是多行文本 或者有左大括号
+	// 判断是否是多行文本 或者有左大中括号
 	hd.Add(
 		func(t *Token, c *Cache) bool {
 			c.chn = t.IsMultiLine()
 			c.parent.Add(t)
-			return c.chn != "" || t.IsOpen()
+			return c.chn != "" || t.IsOpen() || t.IsBracket()
 		},
 		func(t *Token, c *Cache) { c.parent = t },
 	)

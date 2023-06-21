@@ -3,6 +3,37 @@
         "url": "https://api.bilibili.com/x/web-interface/card",
         "method": "GET",
         "comment": "用户名片信息",
+        "data": {
+            "type": "ls",
+            "value": [
+                {
+                    "type": "num"
+                },
+                {
+                    "type": "num"
+                },
+                {
+                    "type": "str"
+                },
+                {
+                    "type": "bool"
+                },
+                {
+                    "type": "card",
+                    "value": {
+                        "face": {
+                            "type": "str"
+                        },
+                        "mid": {
+                            "type": "str"
+                        },
+                        "name": {
+                            "type": "str"
+                        }
+                    }
+                }
+            ]
+        },
         "params": {
             "type": "query",
             "value": {

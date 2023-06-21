@@ -20,6 +20,7 @@ type Token struct {
 	Parent *Token            `json:"-" yaml:"-"`
 	Args   []string          `json:"-" yaml:"-"`
 	Params []string          `json:"-" yaml:"-"`
+	Items  []*Token          `json:"-" yaml:"-"`
 	Tokens map[string]*Token `json:"-" yaml:"-"`
 }
 
@@ -43,9 +44,24 @@ func (token *Token) IsOpen() bool {
 	return token.Value == "{"
 }
 
+// 判断该语句是否为起始列表
+func (token *Token) IsBracket() bool {
+	return token.Value == "["
+}
+
 // 判断该语句是否为闭合括号
 func (token *Token) IsClose() bool {
-	return token.Name == "}"
+	return token.Name == "}" || token.Name == "]"
+}
+
+// 判断该语句是否为字典
+func (token *Token) IsDict() bool {
+	return token.IsOpen() || len(token.Tokens) != 0
+}
+
+// 判断该语句是否为列表
+func (token *Token) IsList() bool {
+	return token.IsBracket() || len(token.Items) != 0
 }
 
 // 判断是否为多行文本
@@ -80,9 +96,13 @@ func (token *Token) IsOptional() bool {
 }
 
 // 添加子语句
-func (token *Token) Add(t *Token) {
+func (token *Token) Add(t *Token, isList ...bool) {
 	t.Parent = token
-	token.Tokens[t.Name] = t
+	if token.IsList() || (len(isList) != 0 && isList[0]) {
+		token.Items = append(token.Items, t)
+	} else {
+		token.Tokens[t.Name] = t
+	}
 }
 
 // 获取子语句
@@ -99,6 +119,11 @@ func (token *Token) Pop(name string) *Token {
 	return nil
 }
 
+// 交换类型和变量名
+func (token *Token) Exchange(vt *Types) *Token {
+	return token.Copy(token.Name+"<"+strings.Join(token.Args, ",")+">", vt)
+}
+
 // 转字典
 func (token *Token) ToDict() map[string]string {
 	dic := make(map[string]string)
@@ -113,16 +138,23 @@ func (token *Token) Copy(nt string, vt *Types) *Token {
 	return t
 }
 
+// 修改输出
+func (token *Token) SetOutput() {
+	if token.IsDict() {
+		token.Output = token.Tokens
+	} else if token.IsList() {
+		token.Output = &token.Items
+	}
+}
+
 // 修改类型
 func (token *Token) SetTypes(vt *Types) {
 	tk := vt.Get(token.Type)
 
 	// 基础类型 不做修改 输出原值
 	if tk == nil {
-		// 有子语句(dict) 替换输出为子语句集合
-		if token.IsOpen() {
-			token.Output = token.Tokens
-		}
+		// 有子语句(dict | list) 替换输出为子语句集合
+		token.SetOutput()
 		return
 	}
 
@@ -134,8 +166,12 @@ func (token *Token) SetTypes(vt *Types) {
 
 	// 自定义类型
 	argsMap := NewZip(tk.Args, token.Params, token.Type+" 的参数个数都能数歪来？")
-	utils.ForMap(tk.Tokens, func(s string, t *Token) { token.Tokens[s] = t.Copy(argsMap.Same(t.Type), vt) })
-	token.Output = token.Tokens
+	if tk.IsDict() {
+		utils.ForMap(tk.Tokens, func(s string, t *Token) { token.Add(t.Copy(argsMap.Same(t.Type), vt)) })
+	} else if tk.IsList() {
+		utils.ForEach[*Token](tk.Items, func(t *Token) { token.Add(t.Copy(argsMap.Same(t.Type), vt), true) })
+	}
+	token.SetOutput()
 }
 
 // 解析类似 res<T1,T2> 中的子类型 T1 T2
@@ -143,7 +179,7 @@ func (token *Token) SetTypes(vt *Types) {
 // data 顺序 Sentence Type Name Hint Value
 func NewToken(data ...string) *Token {
 	// 自动推断类型
-	typ, output := utils.AutoType(data[0], data[3])
+	typ, output := AutoType(data[0], data[3])
 	// 解析类型中的参数
 	typ, params := NameSlice(typ)
 	// 解析变量名中的参数
@@ -151,5 +187,5 @@ func NewToken(data ...string) *Token {
 	// 去除标注前后空白
 	hint := strings.TrimSpace(data[2])
 
-	return &Token{typ, name, hint, data[3], output, nil, args, params, make(map[string]*Token)}
+	return &Token{typ, name, hint, data[3], output, nil, args, params, make([]*Token, 0), make(map[string]*Token)}
 }

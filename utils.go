@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/json"
+	"strconv"
 	"strings"
 
 	"github.com/Drelf2020/utils"
@@ -25,6 +26,35 @@ func NameSlice(s string) (name string, args []string) {
 				depth += strings.Count(s, "<") - strings.Count(s, ">")
 			},
 		)
+	}
+	return
+}
+
+// 自动类型
+func AutoType(k, v string) (typ string, val any) {
+	if k != "" && k != "auto" {
+		typ = k
+	} else if v == "true" || v == "false" {
+		typ = "bool"
+	} else if v == "{" {
+		typ = "dict"
+	} else if v == "[" {
+		typ = "list"
+	} else if utils.IsNumber(v) {
+		typ = "num"
+	} else {
+		typ = "str"
+	}
+	if v == "" {
+		return
+	}
+	switch typ {
+	case "bool":
+		val = v == "true"
+	case "num":
+		val, _ = strconv.ParseFloat(v, 64)
+	case "str":
+		val = v
 	}
 	return
 }

@@ -9,3 +9,11 @@ type card = {
     str name
     str face
 }
+
+type ls<T> = [
+    num
+    num
+    str
+    bool
+    T
+]

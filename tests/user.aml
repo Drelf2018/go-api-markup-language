@@ -24,4 +24,5 @@ GET get_user_card: 用户名片信息 = {
 /web-interface/card"
     query params
     res<userInfo<card>> response
+    ls<card> data
 }
