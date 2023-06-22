@@ -16,6 +16,15 @@ const (
 	STR               // str
 	ENUM              //enum
 	TYPE              //type
+	QUERY             //query
+	BODY              //body
+	GET               //get method
+	POST              //post method
+	OPTION            //option method
+	PUT               //put method
+	DELETE            //delete method
+	HEAD              //head method
+	PATCH             //patch method
 	BOOL              // bool
 	FROM              // from
 	IMPORT            // import
@@ -26,14 +35,14 @@ const (
 )
 
 type LToken struct {
-	kind  int
-	value string
+	Kind  int
+	Value string
 }
 
 func (c *LToken) New(kind int, value string) LToken {
 	return LToken{
-		kind:  kind,
-		value: value,
+		Kind:  kind,
+		Value: value,
 	}
 }
 
@@ -83,40 +92,40 @@ func (l *Lexer) Next() *LToken {
 				l.advance()
 			}
 			token = &LToken{
-				kind:  NUMBER,
-				value: result,
+				Kind:  NUMBER,
+				Value: result,
 			}
 		} else if strings.ContainsRune(brackets, l.current) {
 			switch l.current {
 			case '<':
 				token = &LToken{
-					kind:  LANGLE,
-					value: string(l.current),
+					Kind:  LANGLE,
+					Value: string(l.current),
 				}
 			case '>':
 				token = &LToken{
-					kind:  RANGLE,
-					value: string(l.current),
+					Kind:  RANGLE,
+					Value: string(l.current),
 				}
 			case '{':
 				token = &LToken{
-					kind:  LBRACE,
-					value: string(l.current),
+					Kind:  LBRACE,
+					Value: string(l.current),
 				}
 			case '}':
 				token = &LToken{
-					kind:  RBRACE,
-					value: string(l.current),
+					Kind:  RBRACE,
+					Value: string(l.current),
 				}
 			case '[':
 				token = &LToken{
-					kind:  LBRACKET,
-					value: string(l.current),
+					Kind:  LBRACKET,
+					Value: string(l.current),
 				}
 			case ']':
 				token = &LToken{
-					kind:  RBRACKET,
-					value: string(l.current),
+					Kind:  RBRACKET,
+					Value: string(l.current),
 				}
 			}
 		} else if strings.ContainsRune(alphbet, l.current) {
@@ -128,44 +137,94 @@ func (l *Lexer) Next() *LToken {
 			switch result {
 			case "from":
 				token = &LToken{
-					kind:  FROM,
-					value: result,
+					Kind:  FROM,
+					Value: result,
 				}
 			case "import":
 				token = &LToken{
-					kind:  IMPORT,
-					value: result,
+					Kind:  IMPORT,
+					Value: result,
 				}
 			case "str":
 				token = &LToken{
-					kind:  STR,
-					value: result,
+					Kind:  STR,
+					Value: result,
 				}
 			case "enum":
 				token = &LToken{
-					kind:  ENUM,
-					value: result,
+					Kind:  ENUM,
+					Value: result,
 				}
 			case "type":
 				token = &LToken{
-					kind:  TYPE,
-					value: result,
+					Kind:  TYPE,
+					Value: result,
+				}
+			case "query":
+				token = &LToken{
+					Kind:  TYPE,
+					Value: result,
+				}
+			case "body":
+				token = &LToken{
+					Kind:  TYPE,
+					Value: result,
+				}
+			case "bool":
+				token = &LToken{
+					Kind:  BOOL,
+					Value: result,
+				}
+			case "GET":
+				token = &LToken{
+					Kind:  GET,
+					Value: result,
+				}
+			case "POST":
+				token = &LToken{
+					Kind:  POST,
+					Value: result,
+				}
+			case "OPTION":
+				token = &LToken{
+					Kind:  OPTION,
+					Value: result,
+				}
+			case "PUT":
+				token = &LToken{
+					Kind:  PUT,
+					Value: result,
+				}
+			case "DELETE":
+				token = &LToken{
+					Kind:  DELETE,
+					Value: result,
+				}
+			case "HEAD":
+				token = &LToken{
+					Kind:  HEAD,
+					Value: result,
+				}
+			case "PATCH":
+				token = &LToken{
+					Kind:  PATCH,
+					Value: result,
 				}
 			default:
 				token = &LToken{
-					kind:  IDENTIFIER,
-					value: result,
+					Kind:  IDENTIFIER,
+					Value: result,
 				}
 			}
 		} else if strings.ContainsRune("=", l.current) {
 			token = &LToken{
-				kind:  ASSIGNMENT,
-				value: string(l.current),
+				Kind:  ASSIGNMENT,
+				Value: string(l.current),
 			}
 		} else if strings.ContainsRune(":", l.current) {
 			token = &LToken{
-				kind:  COLON,
-				value: string(l.current),
+				Kind:  COLON,
+				Value: string(l.current),
 			}
 		} else if strings.ContainsRune(" \t", l.current) {
 			l.advance()
@@ -177,20 +236,20 @@ func (l *Lexer) Next() *LToken {
 				l.advance()
 			}
 			token = &LToken{
-				kind:  STRING,
-				value: result,
+				Kind:  STRING,
+				Value: result,
 			}
 		} else {
 			token = &LToken{
-				kind:  EOF,
-				value: "",
+				Kind:  EOF,
+				Value: "",
 			}
 		}
 		l.advance()
 		return token
 	}
 	return &LToken{
-		kind:  EOF,
-		value: "",
+		Kind:  EOF,
+		Value: "",
 	}
 }
