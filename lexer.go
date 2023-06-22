@@ -13,6 +13,7 @@ const (
 	RANGLE            // >
 	LGROUP            // (
 	RGROUP            // )
+	STR               // str
 	ENUM              //enum
 	TYPE              //type
 	BOOL              // bool
@@ -135,6 +136,21 @@ func (l *Lexer) Next() *LToken {
 					kind:  IMPORT,
 					value: result,
 				}
+			case "str":
+				token = &LToken{
+					kind:  STR,
+					value: result,
+				}
+			case "enum":
+				token = &LToken{
+					kind:  ENUM,
+					value: result,
+				}
+			case "type":
+				token = &LToken{
+					kind:  TYPE,
+					value: result,
+				}
 			default:
 				token = &LToken{
 					kind:  IDENTIFIER,
@@ -154,6 +170,16 @@ func (l *Lexer) Next() *LToken {
 		} else if strings.ContainsRune(" \t", l.current) {
 			l.advance()
 			continue
+		} else if strings.ContainsRune("\"", l.current) {
+			result := ""
+			for sidx := l.position; sidx < int64(len(l.text)) && l.current != '"'; sidx++ {
+				result += string(l.current)
+				l.advance()
+			}
+			token = &LToken{
+				kind:  STRING,
+				value: result,
+			}
 		} else {
 			token = &LToken{
 				kind:  EOF,
