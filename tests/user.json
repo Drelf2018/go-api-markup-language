@@ -4,33 +4,69 @@
         "method": "GET",
         "comment": "用户名片信息",
         "data": {
-            "type": "ls",
+            "type": "[2]ls",
             "value": [
                 {
-                    "type": "num"
-                },
-                {
-                    "type": "num"
-                },
-                {
-                    "type": "str"
-                },
-                {
-                    "type": "bool"
-                },
-                {
-                    "type": "card",
-                    "value": {
-                        "face": {
+                    "type": "ls",
+                    "value": [
+                        {
+                            "type": "num"
+                        },
+                        {
+                            "type": "num"
+                        },
+                        {
                             "type": "str"
                         },
-                        "mid": {
-                            "type": "str"
+                        {
+                            "type": "bool"
                         },
-                        "name": {
-                            "type": "str"
+                        {
+                            "type": "card",
+                            "value": {
+                                "face": {
+                                    "type": "str"
+                                },
+                                "mid": {
+                                    "type": "str"
+                                },
+                                "name": {
+                                    "type": "str"
+                                }
+                            }
                         }
-                    }
+                    ]
+                },
+                {
+                    "type": "ls",
+                    "value": [
+                        {
+                            "type": "num"
+                        },
+                        {
+                            "type": "num"
+                        },
+                        {
+                            "type": "str"
+                        },
+                        {
+                            "type": "bool"
+                        },
+                        {
+                            "type": "card",
+                            "value": {
+                                "face": {
+                                    "type": "str"
+                                },
+                                "mid": {
+                                    "type": "str"
+                                },
+                                "name": {
+                                    "type": "str"
+                                }
+                            }
+                        }
+                    ]
                 }
             ]
         },
@@ -45,10 +81,6 @@
                     "type": "bool",
                     "hint": "是否请求用户主页头图",
                     "value": false
-                },
-                "test": {
-                    "type": "num",
-                    "value": 0
                 }
             }
         },

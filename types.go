@@ -14,6 +14,15 @@ func (types Types) Add(token *Token, names ...string) {
 		types[n] = nil
 	}
 	if token != nil {
+		typ, length := token.GetLength(token.Value)
+		if length != -1 {
+			t := NewToken(typ, "", "", "")
+			t.SetTypes(&types)
+			for i := 0; i < int(length); i++ {
+				token.Add(t, true)
+			}
+			token.Value = "List<" + typ + ">"
+		}
 		types[token.Name] = token
 	}
 }
@@ -52,7 +61,7 @@ func (ts *Types) Union(typess ...*Types) *Types {
 
 // 生成正则表达式
 func (types *Types) ToRegexp() *regexp.Regexp {
-	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+	return regexp.MustCompile(` *(?:((?:\[\d*\])?(?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">", `\[`, `\]`, `\w`) + `)*>?) )? *([^:^=^\r^\n]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 }
 
 // 正则查找语句

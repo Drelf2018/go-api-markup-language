@@ -3,20 +3,36 @@ get_user_card:
   method: GET
   comment: 用户名片信息
   data:
-    type: ls
+    type: '[2]ls'
     value:
-    - type: num
-    - type: num
-    - type: str
-    - type: bool
-    - type: card
+    - type: ls
       value:
-        face:
-          type: str
-        mid:
-          type: str
-        name:
-          type: str
+      - type: num
+      - type: num
+      - type: str
+      - type: bool
+      - type: card
+        value:
+          face:
+            type: str
+          mid:
+            type: str
+          name:
+            type: str
+    - type: ls
+      value:
+      - type: num
+      - type: num
+      - type: str
+      - type: bool
+      - type: card
+        value:
+          face:
+            type: str
+          mid:
+            type: str
+          name:
+            type: str
   params:
     type: query
     value:
@@ -27,9 +43,6 @@ get_user_card:
         type: bool
         hint: 是否请求用户主页头图
         value: false
-      test:
-        type: num
-        value: 0
   response:
     type: res
     value:
