@@ -3,6 +3,8 @@ package parser
 import (
 	"regexp"
 	"strings"
+
+	"github.com/Drelf2020/utils"
 )
 
 // 类型集合
@@ -68,7 +70,9 @@ func (types *Types) ToRegexp() *regexp.Regexp {
 func (types *Types) FindTokens(api string) (tokens []*Token) {
 	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
-		tokens = append(tokens, NewToken(sList[1:]...))
+		if !utils.Startswith(strings.TrimSpace(sList[0]), "#") {
+			tokens = append(tokens, NewToken(sList[1:]...))
+		}
 	}
 	return
 }
