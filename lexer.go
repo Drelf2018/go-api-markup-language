@@ -179,52 +179,52 @@ func (l *Lexer) Next() *Token {
 					Value: result,
 				}
 			case "get":
-				token = &LToken{
+				token = &Token{
 					Kind:  GET,
 					Value: result,
 				}
 			case "post":
-				token = &LToken{
+				token = &Token{
 					Kind:  POST,
 					Value: result,
 				}
 			case "option":
-				token = &LToken{
+				token = &Token{
 					Kind:  OPTION,
 					Value: result,
 				}
 			case "put":
-				token = &LToken{
+				token = &Token{
 					Kind:  PUT,
 					Value: result,
 				}
 			case "delete":
-				token = &LToken{
+				token = &Token{
 					Kind:  DELETE,
 					Value: result,
 				}
 			case "head":
-				token = &LToken{
+				token = &Token{
 					Kind:  HEAD,
 					Value: result,
 				}
 			case "patch":
-				token = &LToken{
+				token = &Token{
 					Kind:  PATCH,
 					Value: result,
 				}
 			case "required":
-				token = &LToken{
+				token = &Token{
 					Kind: REQUIRED,
 					Value:result,
 				}
 			case "optional":
-				token = &LToken{
+				token = &Token{
 					Kind: OPTIONAL,
 					Value: result,
 				}
 			case "deprecate":
-				token = &LToken{
+				token = &Token{
 					Kind: DEPRECATE,
 					Value: result,
 				}
