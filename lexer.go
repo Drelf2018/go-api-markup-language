@@ -18,6 +18,9 @@ const (
 	TYPE              //type
 	QUERY             //query
 	BODY              //body
+	REQUIRED
+	OPTIONAL
+	DEPRECATE
 	GET               //get method
 	POST              //post method
 	OPTION            //option method
@@ -175,39 +178,54 @@ func (l *Lexer) Next() *LToken {
 					Kind:  BOOL,
 					Value: result,
 				}
-			case "GET":
+			case "get":
 				token = &LToken{
 					Kind:  GET,
 					Value: result,
 				}
-			case "POST":
+			case "post":
 				token = &LToken{
 					Kind:  POST,
 					Value: result,
 				}
-			case "OPTION":
+			case "option":
 				token = &LToken{
 					Kind:  OPTION,
 					Value: result,
 				}
-			case "PUT":
+			case "put":
 				token = &LToken{
 					Kind:  PUT,
 					Value: result,
 				}
-			case "DELETE":
+			case "delete":
 				token = &LToken{
 					Kind:  DELETE,
 					Value: result,
 				}
-			case "HEAD":
+			case "head":
 				token = &LToken{
 					Kind:  HEAD,
 					Value: result,
 				}
-			case "PATCH":
+			case "patch":
 				token = &LToken{
 					Kind:  PATCH,
+					Value: result,
+				}
+			case "required":
+				token = &LToken{
+					Kind: REQUIRED,
+					Value:result,
+				}
+			case "optional":
+				token = &LToken{
+					Kind: OPTIONAL,
+					Value: result,
+				}
+			case "deprecate":
+				token = &LToken{
+					Kind: DEPRECATE,
 					Value: result,
 				}
 			default:
