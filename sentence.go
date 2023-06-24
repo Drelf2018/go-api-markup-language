@@ -14,6 +14,7 @@ import (
 //
 // 当该语句为字典时 Map 不为空 表示其下包含的语句
 type Sentence struct {
+	Adorn  string               `json:"adorn,omitempty" yaml:"adron,omitempty"`
 	Type   string               `json:"type,omitempty" yaml:"type,omitempty"`
 	Name   string               `json:"-" yaml:"-"`
 	Hint   string               `json:"hint,omitempty" yaml:"hint,omitempty"`
@@ -246,5 +247,5 @@ func NewSentence(data ...string) *Sentence {
 	// 去除标注前后空白
 	hint := strings.TrimSpace(data[2])
 
-	return &Sentence{typ, name, hint, data[3], output, nil, args, params, make([]*Sentence, 0), make(map[string]*Sentence)}
+	return &Sentence{"optional", typ, name, hint, data[3], output, nil, args, params, make([]*Sentence, 0), make(map[string]*Sentence)}
 }
