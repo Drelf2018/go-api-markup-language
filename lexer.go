@@ -281,4 +281,3 @@ func (l *Lexer) Next() *LToken {
 		Value: "",
 	}
 }
-

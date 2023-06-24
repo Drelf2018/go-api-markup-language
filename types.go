@@ -3,6 +3,8 @@ package parser
 import (
 	"regexp"
 	"strings"
+
+	"github.com/Drelf2020/utils"
 )
 
 // 类型集合
@@ -14,6 +16,15 @@ func (types Types) Add(token *Token, names ...string) {
 		types[n] = nil
 	}
 	if token != nil {
+		typ, length := token.GetLength(token.Value)
+		if length != -1 {
+			t := NewToken(typ, "", "", "")
+			t.SetTypes(&types)
+			for i := 0; i < int(length); i++ {
+				token.Add(t, true)
+			}
+			token.Value = "List<" + typ + ">"
+		}
 		types[token.Name] = token
 	}
 }
@@ -52,14 +63,16 @@ func (ts *Types) Union(typess ...*Types) *Types {
 
 // 生成正则表达式
 func (types *Types) ToRegexp() *regexp.Regexp {
-	return regexp.MustCompile(` *(?:((?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">") + `)*>?) )? *([^:^=^\r^\n]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
+	return regexp.MustCompile(` *(?:((?:\[\d*\])?(?:` + types.Join() + `)<?(?:` + types.Join(",", "<", ">", `\[`, `\]`, `\w`) + `)*>?) )? *([^:^=^\r^\n]+)(?:: *([^=^\r^\n]+))? *(?:= *([^\r^\n]+))?`)
 }
 
 // 正则查找语句
 func (types *Types) FindTokens(api string) (tokens []*Token) {
 	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
-		tokens = append(tokens, NewToken(sList[1:]...))
+		if !utils.Startswith(strings.TrimSpace(sList[0]), "#") {
+			tokens = append(tokens, NewToken(sList[1:]...))
+		}
 	}
 	return
 }

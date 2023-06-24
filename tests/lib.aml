@@ -1,7 +1,6 @@
 type query = {
     num mid: 目标用户mid
     bool photo: 是否请求用户主页头图 = false
-    num test = none
 }
 
 type card = {

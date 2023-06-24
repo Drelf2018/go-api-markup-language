@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"regexp"
+	"strconv"
 	"strings"
 
 	"github.com/Drelf2020/utils"
@@ -56,12 +58,12 @@ func (token *Token) IsClose() bool {
 
 // 判断该语句是否为字典
 func (token *Token) IsDict() bool {
-	return token.IsOpen() || len(token.Tokens) != 0
+	return token.IsOpen() || len(token.Tokens) != 0 || token.Type == "dict"
 }
 
 // 判断该语句是否为列表
 func (token *Token) IsList() bool {
-	return token.IsBracket() || len(token.Items) != 0
+	return token.IsBracket() || len(token.Items) != 0 || token.Type == "list" || utils.Startswith(token.Type, "[")
 }
 
 // 判断是否为多行文本
@@ -97,6 +99,9 @@ func (token *Token) IsOptional() bool {
 
 // 添加子语句
 func (token *Token) Add(t *Token, isList ...bool) {
+	if token == nil {
+		return
+	}
 	t.Parent = token
 	if token.IsList() || (len(isList) != 0 && isList[0]) {
 		token.Items = append(token.Items, t)
@@ -140,19 +145,51 @@ func (token *Token) Copy(nt string, vt *Types) *Token {
 
 // 修改输出
 func (token *Token) SetOutput() {
-	if token.IsDict() {
-		token.Output = token.Tokens
-	} else if token.IsList() {
+	if token.IsList() {
 		token.Output = &token.Items
+	} else if token.IsDict() {
+		token.Output = token.Tokens
 	}
+}
+
+// 返回类型数组的具体内容和长度
+func (token *Token) GetLength(value ...string) (string, int64) {
+	var typ string = token.Type
+	var length int64 = -1
+
+	if len(value) != 0 {
+		typ = value[0]
+	}
+
+	// 判断是否为数组
+	utils.ForEach(
+		regexp.MustCompile(`\[(\d*)\]`).FindAllStringSubmatch(typ, -1),
+		func(s []string) {
+			typ = strings.Replace(typ, s[0], "", 1)
+			length, _ = strconv.ParseInt(s[1], 10, 64)
+			if length < 1 {
+				length = 1
+			}
+		},
+		func(s []string) bool { return len(s) != 0 },
+	)
+
+	return typ, length
 }
 
 // 修改类型
 func (token *Token) SetTypes(vt *Types) {
-	tk := vt.Get(token.Type)
+	typ, length := token.GetLength()
+	tk := vt.Get(typ)
 
 	// 基础类型 不做修改 输出原值
 	if tk == nil {
+		if length != -1 {
+			tk = NewToken(typ, "", "", "")
+			for i := 0; i < int(length); i++ {
+				token.Add(tk, true)
+			}
+		}
 		// 有子语句(dict | list) 替换输出为子语句集合
 		token.SetOutput()
 		return
@@ -165,12 +202,34 @@ func (token *Token) SetTypes(vt *Types) {
 	}
 
 	// 自定义类型
+	var nt *Token
 	argsMap := NewZip(tk.Args, token.Params, token.Type+" 的参数个数都能数歪来？")
-	if tk.IsDict() {
-		utils.ForMap(tk.Tokens, func(s string, t *Token) { token.Add(t.Copy(argsMap.Same(t.Type), vt)) })
-	} else if tk.IsList() {
-		utils.ForEach[*Token](tk.Items, func(t *Token) { token.Add(t.Copy(argsMap.Same(t.Type), vt), true) })
+
+	Copy := func(t *Token) *Token {
+		p := ""
+		if len(t.Params) != 0 {
+			p = "<" + strings.Join(t.Params, ",") + ">"
+		}
+		return t.Copy(argsMap.Same(t.Type)+p, vt)
 	}
+
+	if length != -1 {
+		nt = NewToken(tk.Name, tk.Name, tk.Hint, tk.Value)
+	} else {
+		nt = token
+	}
+	if tk.IsDict() {
+		utils.ForMap(tk.Tokens, func(s string, t *Token) { nt.Add(Copy(t)) })
+	} else if tk.IsList() {
+		utils.ForEach(tk.Items, func(t *Token) { nt.Add(Copy(t), true) })
+	}
+	if length != -1 {
+		nt.SetOutput()
+		for i := 0; i < int(length); i++ {
+			token.Add(nt, true)
+		}
+	}
+
 	token.SetOutput()
 }
 
