@@ -78,6 +78,11 @@ func (sentence *Sentence) IsMultiLine() string {
 	return ""
 }
 
+
+func (sentence *Sentence) IsDeprecate() bool {
+	return sentence.Adorn == "deprecate"
+}
+
 // 判断是否有引号
 func (sentence *Sentence) HasQuotation(chn string) bool {
 	return strings.Count(sentence.Name, chn) == 1
