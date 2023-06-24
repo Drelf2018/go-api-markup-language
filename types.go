@@ -8,24 +8,24 @@ import (
 )
 
 // 类型集合
-type Types map[string]*Token
+type Types map[string]*Sentence
 
 // 添加类型
-func (types Types) Add(token *Token, names ...string) {
+func (types Types) Add(sentence *Sentence, names ...string) {
 	for _, n := range names {
 		types[n] = nil
 	}
-	if token != nil {
-		typ, length := token.GetLength(token.Value)
+	if sentence != nil {
+		typ, length := sentence.GetLength(sentence.Value)
 		if length != -1 {
-			t := NewToken(typ, "", "", "")
+			t := NewSentence(typ, "", "", "")
 			t.SetTypes(&types)
 			for i := 0; i < int(length); i++ {
-				token.Add(t, true)
+				sentence.Add(t, true)
 			}
-			token.Value = "List<" + typ + ">"
+			sentence.Value = "List<" + typ + ">"
 		}
-		types[token.Name] = token
+		types[sentence.Name] = sentence
 	}
 }
 
@@ -67,20 +67,20 @@ func (types *Types) ToRegexp() *regexp.Regexp {
 }
 
 // 正则查找语句
-func (types *Types) FindTokens(api string) (tokens []*Token) {
+func (types *Types) FindSentences(api string) (sentences []*Sentence) {
 	re := types.ToRegexp()
 	for _, sList := range re.FindAllStringSubmatch(api, -1) {
 		if !utils.Startswith(strings.TrimSpace(sList[0]), "#") {
-			tokens = append(tokens, NewToken(sList[1:]...))
+			sentences = append(sentences, NewSentence(sList[1:]...))
 		}
 	}
 	return
 }
 
-// 获取 Token
+// 获取 Sentence
 //
 // 当 key 为基础类型(str num bool)时返回 nil
-func (types *Types) Get(key string) *Token {
+func (types *Types) Get(key string) *Sentence {
 	return (*types)[key]
 }
 

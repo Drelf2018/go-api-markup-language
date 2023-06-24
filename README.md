@@ -38,7 +38,7 @@ GET get_user_card: 用户名片信息 = {
 }
 ```
 
-这个文件的格式是：每行文本称为一个 `Token` 每个 `Token` 由四部分组成，分别为 `Type` `Name` `Hint` `Value` 。
+这个文件的格式是：每行文本称为一个 `Sentence` 每个 `Sentence` 由四部分组成，分别为 `Type` `Name` `Hint` `Value` 。
 
 ```aml
 GET get_user_card: 用户名片信息 = {

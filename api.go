@@ -17,32 +17,32 @@ type Api struct {
 	// 函数名
 	Function string `json:"function,omitempty" yaml:"function,omitempty"`
 	// 接口描述
-	Info *Token `json:"-" yaml:"-"`
+	Info *Sentence `json:"-" yaml:"-"`
 	// 接口载荷
-	Data *Token `json:"data,omitempty" yaml:"data,omitempty"`
+	Data *Sentence `json:"data,omitempty" yaml:"data,omitempty"`
 	// 接口参数
-	Params *Token `json:"params,omitempty" yaml:"params,omitempty"`
+	Params *Sentence `json:"params,omitempty" yaml:"params,omitempty"`
 	// 接口请求头
-	Headers *Token `json:"headers,omitempty" yaml:"headers,omitempty"`
+	Headers *Sentence `json:"headers,omitempty" yaml:"headers,omitempty"`
 	// 接口文本
-	Cookies *Token `json:"cookies,omitempty" yaml:"cookies,omitempty"`
+	Cookies *Sentence `json:"cookies,omitempty" yaml:"cookies,omitempty"`
 	// 接口返回
-	Response *Token `json:"response,omitempty" yaml:"response,omitempty"`
+	Response *Sentence `json:"response,omitempty" yaml:"response,omitempty"`
 }
 
 // 构造函数
-func NewApi(token *Token) *Api {
+func NewApi(sentence *Sentence) *Api {
 	return &Api{
-		token.Pop("url").Value,
-		token.Type,
-		token.Hint,
-		token.Name,
-		token,
-		token.Pop("data"),
-		token.Pop("params"),
-		token.Pop("headers"),
-		token.Pop("cookies"),
-		token.Pop("response"),
+		sentence.Pop("url").Value,
+		sentence.Type,
+		sentence.Hint,
+		sentence.Name,
+		sentence,
+		sentence.Pop("data"),
+		sentence.Pop("params"),
+		sentence.Pop("headers"),
+		sentence.Pop("cookies"),
+		sentence.Pop("response"),
 	}
 }
 
@@ -60,11 +60,11 @@ type ApiManager struct {
 }
 
 // 添加新 api
-func (am *ApiManager) Add(token *Token) {
-	api := NewApi(token)
+func (am *ApiManager) Add(sentence *Sentence) {
+	api := NewApi(sentence)
 	am.Apis = append(am.Apis, api)
 	am.Output[api.Function] = api
-	if len(api.Info.Tokens) == 0 {
+	if len(api.Info.Map) == 0 {
 		api.Function = ""
 	}
 }
