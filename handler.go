@@ -1,38 +1,38 @@
 package parser
 
-type Handler[T any, V any] struct {
-	cache V
-	keys  []func(T, V) bool
-	pres  []func(T, V)
-	fs    []func(T, V)
+type Handler[T any] struct {
+	keys []func(T) bool
+	pres []func(T)
+	fs   []func(T)
 }
 
-func (hd *Handler[T, V]) Prepare(v func(T, V)) {
+func (hd *Handler[T]) Prepare(v func(T)) *Handler[T] {
 	hd.pres = append(hd.pres, v)
+	return hd
 }
 
-func (hd *Handler[T, V]) Add(k func(T, V) bool, v func(T, V)) {
+func (hd *Handler[T]) Add(k func(T) bool, v func(T)) *Handler[T] {
 	hd.keys = append(hd.keys, k)
 	hd.fs = append(hd.fs, v)
+	return hd
 }
 
-func (hd *Handler[T, V]) Do(t T) {
+func (hd *Handler[T]) Do(t T) {
 	for _, pre := range hd.pres {
-		pre(t, hd.cache)
+		pre(t)
 	}
 	for i, k := range hd.keys {
-		if k(t, hd.cache) {
-			hd.fs[i](t, hd.cache)
+		if k(t) {
+			hd.fs[i](t)
 			break
 		}
 	}
 }
 
-func NewHandler[T any, V any](cache V) *Handler[T, V] {
-	return &Handler[T, V]{
-		cache,
-		make([]func(T, V) bool, 0),
-		make([]func(T, V), 0),
-		make([]func(T, V), 0),
+func NewHandler[T any]() *Handler[T] {
+	return &Handler[T]{
+		make([]func(T) bool, 0),
+		make([]func(T), 0),
+		make([]func(T), 0),
 	}
 }
