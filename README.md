@@ -1,8 +1,8 @@
-## go-bilibili-api
+# go-bilibili-api
 
 一种记录 Api 调用方式的文件格式的 golang 解析器。
 
-### 介绍
+## 介绍
 
 在 `tests` 目录下有文件 `user.aml` 。
 
@@ -38,7 +38,7 @@ GET get_user_card: 用户名片信息 = {
 }
 ```
 
-这个文件的格式是：每行文本称为一个 `Token` 每个 `Token` 由四部分组成，分别为 `Type` `Name` `Hint` `Value` 。
+这个文件的格式是：每行文本称为一个 `Sentence` 每个 `Sentence` 由四部分组成，分别为 `Type` `Name` `Hint` `Value` 。
 
 ```aml
 GET get_user_card: 用户名片信息 = {
@@ -107,7 +107,7 @@ GET get_user_card: 用户名片信息 = {
 
 ### 神奇的类型
 
-你可能到了，上述格式中出现了非标准 `json` 类型（指 `str` `num` `bool`）
+你可能到了，上述格式中出现了非JSON数据类型（JSON数据类型`str`、`num`、`bool`这一类）
 
 ```aml
 query params
@@ -133,7 +133,7 @@ type query = {
 + query params
 ```
 
-你可能也注意到了，上述语句中出现了含有尖括号 `<>` 的类型。没错，这就是传参方式。
+你可能也注意到了，上述语句中出现了含有尖括号 `<>` 的类型。没错，这就是泛型。
 
 ```aml
 type res<T> = {
@@ -144,9 +144,9 @@ type res<T> = {
 }
 ```
 
-找到 `res` 的定义处，我们使用 `<>` 和其中的任意字符表示参数，这个参数名可用于其内部语句的类型处。
+找到`res`的定义处，使用`<>`和其中的任意字符表示这个类型的泛型，泛型可用于其内部语句的类型处。
 
-当 `res<userInfo<card>> response` 使用时，`response` 会被解析为：
+当`res<userInfo<card>> response`使用时。`response`会被解析为：
 
 ```aml
 response = {
@@ -157,9 +157,9 @@ response = {
 }
 ```
 
-参数可以多个，用 `,` 分隔，也就是 `type res<T1,T2> = xxx` 和 `res<a,b> response`
+参数可以多个，用 `,` 分隔，也就是 `type res<T1,T2> = xxx` 和 `res<a, b> response`
 
-### 导入类型
+### 从文件导入类型
 
 ```aml
 # lib.aml
@@ -238,3 +238,7 @@ web-interface/card"
 ### 最后
 
 ~~之后会支持别的语言大概~~
+
+## 相关项目
+
+- [API Markup Language JavaScript]https://github.com/Kamisato-Ayaka-233/ApiMarkupLanguage) - 使用TypeScript解析AML
