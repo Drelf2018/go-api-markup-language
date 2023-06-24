@@ -54,6 +54,30 @@ res<userInfo<card>> response
 
 例如上面这行：`Type=res<userInfo<card>>` `Name=response` `Hint=""` `Value=""` 。
 
+### 关键字
+
+|关键字|意义|
+|:----------------|:------------------------------------|
+|query|http请求当中的query参数,即url问号后的部分|
+|body|http请求当中的请求体参数,一般是json类型,当然也会有二进制,或者表单等格式的数据|
+|required|指定参数是必要的|
+|optional|指定参数是可选的|
+|get|api方法为get请求|
+|post|api方法为post请求|
+|delete|api方法为delete请求|
+|put|api方法为put请求|
+|option|api方法为option请求|
+|head|api方法为head请求|
+|patch|api方法为patch请求|
+|enum|字段数据类型为枚举值|
+|str|字段数据类型为字符串|
+|num|字段数据类型为数字|
+|auto|aml会自动推导数据类型,默认为字符串|
+|bool|布尔值,即true 或者false|
+|import|导入其他文件当中的类型定义|
+|from|指定导入来源|
+|deprecate|指定参数被弃用|
+
 ### 编写接口
 
 ```aml
