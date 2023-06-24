@@ -80,7 +80,7 @@ func (l *Lexer) IsEOF() bool {
 
 func (l *Lexer) Next() *LToken {
 	numberic := "0123456789"
-	alphbet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+	alphbet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$_"
 	brackets := "(){}[]<>"
 	length := len(l.text)
 	var token *LToken
@@ -162,12 +162,12 @@ func (l *Lexer) Next() *LToken {
 				}
 			case "query":
 				token = &LToken{
-					Kind:  TYPE,
+					Kind:  QUERY,
 					Value: result,
 				}
 			case "body":
 				token = &LToken{
-					Kind:  TYPE,
+					Kind:  BODY,
 					Value: result,
 				}
 			case "bool":
@@ -227,9 +227,11 @@ func (l *Lexer) Next() *LToken {
 				Value: string(l.current),
 			}
 		} else if strings.ContainsRune(" \t", l.current) {
+			// 跳过空白字符
 			l.advance()
 			continue
 		} else if strings.ContainsRune("\"", l.current) {
+			// 字符串
 			result := ""
 			for sidx := l.position; sidx < int64(len(l.text)) && l.current != '"'; sidx++ {
 				result += string(l.current)
@@ -240,9 +242,17 @@ func (l *Lexer) Next() *LToken {
 				Value: result,
 			}
 		} else {
-			token = &LToken{
-				Kind:  EOF,
-				Value: "",
+			if l.current == '#' {
+				// 忽略注释
+				for cidx := l.position; cidx < int64(len(l.text)) && l.current != '\n'; cidx++ {
+					l.advance()
+					continue
+				}
+			} else {
+				token = &LToken{
+					Kind:  EOF,
+					Value: "",
+				}
 			}
 		}
 		l.advance()
