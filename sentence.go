@@ -85,7 +85,7 @@ func (sentence *Sentence) HasQuotation(chn string) bool {
 
 // 判断该语句是否为必要变量
 func (sentence *Sentence) IsRequired() bool {
-	return sentence.Value == ""
+	return sentence.Adorn == "required"
 }
 
 // 判断该语句是否为常量
