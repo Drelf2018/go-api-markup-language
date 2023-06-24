@@ -50,7 +50,7 @@ func (c *Token) New(kind int, value string) Token {
 }
 
 type Lexer struct {
-	position int64
+	position uint64
 	text     string
 	current  rune
 }
@@ -70,10 +70,10 @@ func (l *Lexer) PutText(text string) {
 
 func (l *Lexer) advance() {
 	l.position++
-	if l.position >= int64(len(l.text)) {
+	if l.position >= uint64(len(l.text)) {
 		l.current = 0
 	} else {
-		l.current = rune(l.text[uint64(l.position)])
+		l.current = rune(l.text[l.position])
 	}
 }
 
@@ -85,12 +85,12 @@ func (l *Lexer) Next() *Token {
 	numberic := "0123456789"
 	alphbet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$_"
 	brackets := "(){}[]<>"
-	length := len(l.text)
+	length := uint64(len(l.text))
 	var token *Token
-	for idx := 0; idx <= length && l.current != 0; idx++ {
+	for idx  := uint64(0); idx <= length && l.current != 0; idx++ {
 		if strings.ContainsRune(numberic, l.current) {
 			result := ""
-			for nidx := l.position; nidx < int64(len(l.text)) && strings.ContainsRune(numberic+".", l.current); nidx++ {
+			for nidx := l.position; nidx < length && strings.ContainsRune(numberic+".", l.current); nidx++ {
 				result += string(l.current)
 				l.advance()
 			}
@@ -133,7 +133,7 @@ func (l *Lexer) Next() *Token {
 			}
 		} else if strings.ContainsRune(alphbet, l.current) {
 			result := ""
-			for aidx := l.position; aidx < int64(len(l.text)) && strings.ContainsRune(alphbet+numberic, l.current); aidx++ {
+			for aidx := l.position; aidx < length && strings.ContainsRune(alphbet+numberic, l.current); aidx++ {
 				result += string(l.current)
 				l.advance()
 			}
@@ -251,7 +251,7 @@ func (l *Lexer) Next() *Token {
 		} else if strings.ContainsRune("\"", l.current) {
 			// 字符串
 			result := ""
-			for sidx := l.position; sidx < int64(len(l.text)) && l.current != '"'; sidx++ {
+			for sidx := l.position; sidx < length && l.current != '"'; sidx++ {
 				result += string(l.current)
 				l.advance()
 			}
@@ -262,7 +262,7 @@ func (l *Lexer) Next() *Token {
 		} else {
 			if l.current == '#' {
 				// 忽略注释
-				for cidx := l.position; cidx < int64(len(l.text)) && l.current != '\n'; cidx++ {
+				for cidx := l.position; cidx < length && l.current != '\n'; cidx++ {
 					l.advance()
 					continue
 				}
