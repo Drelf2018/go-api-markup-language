@@ -6,20 +6,20 @@ enum enu = {
 }
 
 type res<T> = {
-    num code: 返回码 = 0
-    str message: 返回消息
+    num code: "返回码" = 0
+    str message: "返回消息"
     num ttl = 1
-    T data: 数据
+    T data: "数据"
 }
 
 type userInfo<T> = {
-    T card: 查询用户的信息
-    bool following: 是否关注
-    num follower: 粉丝数
-    enu media: 媒体 = video
+    T card: "查询用户的信息"
+    bool following: "是否关注"
+    num follower: "粉丝数"
+    enu media: "媒体" = video
 }
 
-GET get_user_card: 用户名片信息 = {
+GET get_user_card: "用户名片信息" = {
     str url = "https://api.bilibili.com/x
 /web-interface/card"
     query params
