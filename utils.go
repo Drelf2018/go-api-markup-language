@@ -1,4 +1,4 @@
-package parser
+package aml
 
 import (
 	"encoding/json"

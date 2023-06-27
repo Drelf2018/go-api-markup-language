@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	parser "github.com/Drelf2018/go-bilibili-api"
+	aml "github.com/Drelf2018/go-api-markup-language"
 	"github.com/Drelf2020/utils"
 )
 
@@ -30,7 +30,7 @@ func ValueToPython(typ, val string) string {
 }
 
 // 转为 Python 格式
-func SentenceToPython(sentence *parser.Sentence) (s string) {
+func SentenceToPython(sentence *aml.Sentence) (s string) {
 	s = sentence.Name
 	typ := strings.Replace(sentence.Type, "num", "int", 1)
 	val := sentence.Value
@@ -44,7 +44,7 @@ func SentenceToPython(sentence *parser.Sentence) (s string) {
 	return
 }
 
-func ToPythonFunc(format string, api *parser.Api) string {
+func ToPythonFunc(format string, api *aml.Api) string {
 	r, o, all := []string{}, []string{}, []string{}
 	hint := api.Hint
 	params := []string{}
@@ -74,7 +74,7 @@ func ToPythonFunc(format string, api *parser.Api) string {
 	return format
 }
 
-func ToPython(am *parser.ApiManager, path, name string) error {
+func ToPython(am *aml.ApiManager, path, name string) error {
 	am.ToJson(path + name + ".json")
 	am.ToYaml(path + name + ".yml")
 	s := utils.ReadFile("./template/python/func.py")

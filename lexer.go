@@ -1,178 +1,223 @@
-package parser
+package aml
 
 import (
+	"bufio"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/Drelf2020/utils"
 )
 
-const (
-	NUMBER     = iota + 10 // number
-	STRING                 // string
-	LBRACKET               // [
-	RBRACKET               // ]
-	LBRACE                 // {
-	RBRACE                 // }
-	LANGLE                 // <
-	RANGLE                 // >
-	LGROUP                 // (
-	RGROUP                 // )
-	NUM                    // num
-	STR                    // str
-	ENUM                   // enum
-	TYPE                   // type
-	QUERY                  // query
-	BODY                   // body
-	REQUIRED               // required
-	OPTIONAL               // optional
-	DEPRECATE              // deprecate
-	GET                    // get method
-	POST                   // post method
-	OPTION                 // option method
-	PUT                    // put method
-	DELETE                 // delete method
-	HEAD                   // head method
-	PATCH                  // patch method
-	BOOL                   // bool
-	FROM                   // from
-	IMPORT                 // import
-	COLON                  // :
-	IDENTIFIER             // identifier
-	ASSIGNMENT             // =
-)
+// 词法分析器
+type Lexer struct {
+	file      io.Reader
+	bufReader *bufio.Reader
 
-type Token struct {
-	Kind  int
-	Value string
+	// 当前字符和读取时错误
+	current rune
+	err     error
+
+	// 暂存的字符
+	storage []rune
+
+	// Token 池和发送通道
+	pool *Pool[Token]
+	ch   chan *Token
 }
 
-// 关键字
-func GetKind(result string) int {
-	switch result {
-	case "from":
-		return FROM
-	case "import":
-		return IMPORT
-	case "num":
-		return NUM
-	case "str":
-		return STR
-	case "enum":
-		return ENUM
-	case "type":
-		return TYPE
-	case "query":
-		return QUERY
-	case "body":
-		return BODY
-	case "bool":
-		return BOOL
-	case "GET":
-		return GET
-	case "POST":
-		return POST
-	case "OPTION":
-		return OPTION
-	case "PUT":
-		return PUT
-	case "DELETE":
-		return DELETE
-	case "HEAD":
-		return HEAD
-	case "PATCH":
-		return PATCH
-	case "required":
-		return REQUIRED
-	case "optional":
-		return OPTIONAL
-	case "deprecate":
-		return DEPRECATE
-	default:
-		return IDENTIFIER
+// 获取下位字符
+func (l *Lexer) Next() bool {
+	if l.err == io.EOF {
+		return false
+	}
+	l.current, _, l.err = l.bufReader.ReadRune()
+	if l.err != nil && l.err != io.EOF {
+		// 如果读到文件尾 该次仍返回 true
+		// 之后运行本函数再返回 false
+		// 否则抛异常
+		panic(l.err)
+	}
+	return true
+}
+
+// 读取 string
+func (l *Lexer) Read() string {
+	return string(l.current)
+}
+
+// 获取暂存字符长度
+func (l *Lexer) Length() int {
+	return len(l.storage)
+}
+
+// 暂存当前字符
+func (l *Lexer) Store() {
+	l.storage = append(l.storage, l.current)
+}
+
+// 清空暂存并以 string 返回
+func (l *Lexer) Restore() string {
+	r := string(l.storage)
+	l.storage = make([]rune, 0)
+	return r
+}
+
+// 获取暂存第一个字符
+func (l *Lexer) First() string {
+	if l.Length() == 0 {
+		return ""
+	}
+	return string(l.storage[0])
+}
+
+// 判断暂存是否以引号起始
+func (l *Lexer) HasQuotation() bool {
+	if l.Length() == 0 {
+		return false
+	}
+	return strings.Contains("\"'`", l.First())
+}
+
+// 关闭文件
+func (l *Lexer) Close() {
+	if file, ok := l.file.(*os.File); ok {
+		file.Close()
 	}
 }
 
-func Parse(lexer *Scanner) chan Token {
-	ch := make(chan Token)
+// 读取 Token
+func (l *Lexer) Scan(tokens ...*Token) *Token {
+	for _, t := range tokens {
+		l.Done(t)
+	}
+	return <-l.ch
+}
 
-	// 发送新 Token 到通道
-	// tokens 是可选的
-	// 这个函数会将 lexer 中暂存的字符（如果有）转为 Token
-	// 再一并 tokens 发送至通道
-	send := func(tokens ...Token) {
-		if lexer.Length() != 0 {
-			kind := -1
-			result := lexer.Restore()
-			if utils.IsNumber(result) {
-				kind = NUMBER
-			} else {
-				kind = GetKind(result)
-			}
-			ch <- Token{kind, result}
+// 发送
+func (l *Lexer) Send(kind int, value string) {
+	l.ch <- l.pool.Get().Set(kind, value)
+}
+
+// 销毁
+func (l *Lexer) Done(t *Token) {
+	l.pool.Put(t)
+}
+
+// 发送暂存的字符
+func (l *Lexer) SendStorage() {
+	if l.Length() != 0 {
+		result := l.Restore()
+		if utils.IsNumber(result) {
+			l.Send(NUMBER, result)
+		} else {
+			l.Send(GetKind(result), result)
 		}
-		utils.ForEach(tokens, func(t Token) { ch <- t })
 	}
+}
 
-	// 延迟 异步 启动解析 Token
-	defer func() {
-		go func() {
-			for lexer.Next() {
-				s := lexer.Read()
+// 发送当前
+func (l *Lexer) SendNow(kind int) {
+	l.SendStorage()
+	l.Send(kind, l.Read())
+}
 
-				// 多行文本
-				if lexer.HasQuotation() {
-					if lexer.First() == s {
-						// 多行字符串结束了
-						ch <- Token{STRING, lexer.Restore()[1:]}
-					} else {
-						lexer.Store()
-					}
-					continue
+// 异步启动解析 Token
+func (l Lexer) init() *Lexer {
+	go func() {
+		for l.Next() {
+			s := l.Read()
+
+			// 多行文本
+			if l.HasQuotation() {
+				if l.First() == s {
+					// 多行字符串结束了
+					l.Send(STRING, l.Restore()[1:])
+				} else {
+					l.Store()
 				}
-
-				// 如果开头是 # 则忽略直到换行
-				if lexer.First() == "#" {
-					if s != "\n" {
-						continue
-					}
-					lexer.Restore()
-				}
-
-				// 跳过空白字符
-				if strings.Contains(" \t\n\r", s) {
-					send()
-					continue
-				}
-
-				switch s {
-				case "<":
-					send(Token{LANGLE, s})
-				case ">":
-					send(Token{RANGLE, s})
-				case "{":
-					send(Token{LBRACE, s})
-				case "}":
-					send(Token{RBRACE, s})
-				case "[":
-					send(Token{LBRACKET, s})
-				case "]":
-					send(Token{RBRACKET, s})
-				case "=":
-					send(Token{ASSIGNMENT, s})
-				case ":":
-					send(Token{COLON, s})
-				case "#":
-					send()
-					lexer.Store()
-				default:
-					lexer.Store()
-				}
+				continue
 			}
 
-			// 读取至文件尾 关闭文件和通道
-			close(ch)
-			lexer.Close()
-		}()
+			// 如果开头是 # 则忽略直到换行
+			if l.First() == "#" {
+				if s != "\n" {
+					continue
+				}
+				l.Restore()
+			}
+
+			// 跳过空白字符
+			if strings.Contains(" \t\n\r", s) {
+				l.SendStorage()
+				continue
+			}
+
+			switch s {
+			case ",":
+				l.SendNow(COMMA)
+			case "<":
+				l.SendNow(LANGLE)
+			case ">":
+				l.SendNow(RANGLE)
+			case "(":
+				l.SendNow(LGROUP)
+			case ")":
+				l.SendNow(RGROUP)
+			case "[":
+				l.SendNow(LBRACKET)
+			case "]":
+				l.SendNow(RBRACKET)
+			case "{":
+				l.SendNow(LBRACE)
+			case "}":
+				l.SendNow(RBRACE)
+			case "=":
+				l.SendNow(ASSIGNMENT)
+			case ":":
+				l.SendNow(COLON)
+			case "#":
+				l.SendStorage()
+				fallthrough
+			default:
+				l.Store()
+			}
+		}
+
+		// 读取至文件尾 关闭文件和通道
+		close(l.ch)
+		l.Close()
 	}()
-	return ch
+	return &l
+}
+
+// 获取文件流
+func FromFile(path string) (l *Lexer) {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	// bufio.NewReader(file) 等价 bufio.NewReaderSize(file, 4096) 可根据需求修改 size
+	return Lexer{
+		file,
+		bufio.NewReader(file),
+		0,
+		nil,
+		make([]rune, 0),
+		NewPool[Token](),
+		make(chan *Token),
+	}.init()
+}
+
+// 获取网络流
+func FromURL(url string) (l *Lexer) {
+	return new(Lexer)
+}
+
+// 自动选择
+func NewLexer(path string) *Lexer {
+	if utils.Startswith(path, "http") {
+		return FromURL(path)
+	}
+	return FromFile(path)
 }

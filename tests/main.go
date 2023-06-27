@@ -1,18 +1,16 @@
 package main
 
 import (
-	parser "github.com/Drelf2018/go-bilibili-api"
+	aml "github.com/Drelf2018/go-api-markup-language"
+	"github.com/Drelf2018/go-api-markup-language/translator"
 	"github.com/Drelf2020/utils"
 )
 
 var log = utils.GetLog()
 
 func main() {
-	// am := parser.GetApi("./tests/user.aml")
-	// utils.ForMap(am.Output, func(s string, a *parser.Api) { log.Info(s, " | ", *a) })
-	// translator.ToPython(am, "./tests/", "user")
-	scanner := parser.NewScanner("./tests/user.aml")
-	for t := range parser.Parse(scanner) {
-		log.Debug(t)
-	}
+	parser := aml.NewParser("./tests/user.aml")
+	am := parser.Parse()
+	utils.ForMap(am.Output, func(s string, a *aml.Api) { log.Info(s, " | ", *a) })
+	translator.ToPython(am, "./tests/", "user")
 }

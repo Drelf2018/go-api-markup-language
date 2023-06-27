@@ -1,4 +1,4 @@
-package parser
+package aml
 
 import (
 	"strings"
@@ -46,6 +46,8 @@ func NewApi(sentence *Sentence) *Api {
 	}
 }
 
+type Types map[string]*Sentence
+
 // Api 管理器 用来保存和输出解析的 Api
 //
 // Apis: 已经解析完成的任务
@@ -54,13 +56,18 @@ func NewApi(sentence *Sentence) *Api {
 //
 // Vartypes: 支持的变量类型 auto str num bool
 type ApiManager struct {
-	Apis     []*Api
-	Output   map[string]*Api
-	VarTypes *Types
+	Apis   []*Api
+	Output map[string]*Api
+	Types
 }
 
 // 添加新 api
 func (am *ApiManager) Add(sentence *Sentence) {
+	utils.ForMap(
+		sentence.Map,
+		func(s1 string, s2 *Sentence) { s2.Use(am.Types) },
+		func(s1 string, s2 *Sentence) bool { return GetKind(s1) == IDENTIFIER },
+	)
 	api := NewApi(sentence)
 	am.Apis = append(am.Apis, api)
 	am.Output[api.Function] = api
@@ -102,6 +109,6 @@ func NewApiManager() *ApiManager {
 	return &ApiManager{
 		make([]*Api, 0),
 		make(map[string]*Api),
-		NewTypes("type", "enum", "auto", "str", "num", "bool"),
+		make(Types),
 	}
 }

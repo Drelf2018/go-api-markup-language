@@ -1,4 +1,4 @@
-module github.com/Drelf2018/go-bilibili-api
+module github.com/Drelf2018/go-api-markup-language
 
 go 1.20
 

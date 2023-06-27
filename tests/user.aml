@@ -1,9 +1,9 @@
 from lib import *
 
-enum enu = {
+type enu = (
     video = 1
     audio = 2
-}
+)
 
 type res<T> = {
     num code: "返回码" = 0
@@ -20,8 +20,7 @@ type userInfo<T> = {
 }
 
 GET get_user_card: "用户名片信息" = {
-    str url = "https://api.bilibili.com/x
-/web-interface/card"
+    str url = "https://api.bilibili.com/x/web-interface/card"
     query params
     res<userInfo<card>> response
  #   [2]ls<card> data
