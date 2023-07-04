@@ -41,8 +41,8 @@ type Token struct {
 }
 
 // 判空
-func (t *Token) IsNull() bool {
-	return t.Kind <= 0
+func (t *Token) NotNull() bool {
+	return t.Kind > 0
 }
 
 // 新建

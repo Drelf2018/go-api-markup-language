@@ -16,23 +16,20 @@ type Lexer struct {
 }
 
 func (l *Lexer) Next() bool {
-	if !l.token.IsNull() {
+	if l.token.NotNull() {
 		return true
 	}
 	l.Read()
-	return !l.token.IsNull()
+	return l.token.NotNull()
 }
 
-func (l *Lexer) Get() *Token {
-	if l.Next() {
-		return l.token
-	}
-	return nil
+func (l *Lexer) Shift() *Lexer {
+	l.token.Shift(l.victim)
+	return l
 }
 
 func (l *Lexer) Done() (int, string) {
-	l.token.Shift(l.victim)
-	l.Next()
+	l.Shift().Next()
 	return l.token.Kind, l.token.Value
 }
 

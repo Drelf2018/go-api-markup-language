@@ -16,6 +16,8 @@ type Parser struct {
 	*Lexer
 	// 文件路径
 	dir string
+	// 数组长度
+	length int64
 	// 暂存的 Sentence
 	sentence *Sentence
 	// api 管理器
@@ -89,14 +91,14 @@ func (p *Parser) MatchType() error {
 }
 
 // 匹配类型数组
-func (p *Parser) MatchLength() (length int64, err error) {
+func (p *Parser) MatchLength() (err error) {
 	k, v := p.Done()
 	if k == NUMBER {
-		length, err = strconv.ParseInt(v, 10, 64)
+		p.length, err = strconv.ParseInt(v, 10, 64)
 		k, v = p.Done()
 	}
 	if k != RBRACKET {
-		return -1, fmt.Errorf("%v 不是合法的中括号", v)
+		return fmt.Errorf("%v 不是合法的中括号", v)
 	}
 	return
 }
@@ -122,7 +124,10 @@ func (p *Parser) MatchApi(typ string) error {
 }
 
 // 匹配变量
-func (p *Parser) MatchVar(typ string, length int64) (*Sentence, *Token) {
+func (p *Parser) MatchVar(typ string) *Sentence {
+	if p.length != -1 {
+		log.Debug(p.length)
+	}
 	var kind int = LANGLE
 	var args []string
 	var name, hint, value string
@@ -133,7 +138,7 @@ func (p *Parser) MatchVar(typ string, length int64) (*Sentence, *Token) {
 		}
 	}
 	if p.sentence.base == LBRACKET {
-		return p.sentence.Add(typ, name, hint, value, args, p.Types), nil
+		return p.sentence.Add(typ, name, hint, value, args, p.Types)
 	}
 	if kind == LANGLE {
 		kind, name = p.Done()
@@ -152,13 +157,12 @@ func (p *Parser) MatchVar(typ string, length int64) (*Sentence, *Token) {
 		_, value = p.Done()
 		p.Done()
 	}
-	return p.sentence.Add(typ, name, hint, value, args, p.Types), p.Get()
+	return p.sentence.Add(typ, name, hint, value, args, p.Types)
 }
 
 // 选择匹配
-func (p *Parser) Match(t *Token) *Token {
-	var length int64 = -1
-	switch t.Kind {
+func (p *Parser) Match() {
+	switch p.token.Kind {
 	case FROM:
 		i, err := p.MatchImport()
 		utils.PanicErr(err)
@@ -171,7 +175,7 @@ func (p *Parser) Match(t *Token) *Token {
 		err := p.MatchType()
 		utils.PanicErr(err)
 	case GET, POST:
-		err := p.MatchApi(t.Value)
+		err := p.MatchApi(p.token.Value)
 		utils.PanicErr(err)
 	case RBRACE, RBRACKET, RGROUP:
 		if p.sentence.IsApi() {
@@ -179,34 +183,30 @@ func (p *Parser) Match(t *Token) *Token {
 		}
 		p.sentence = p.sentence.parent
 	case LBRACKET:
-		var err error
-		length, err = p.MatchLength()
+		err := p.MatchLength()
 		utils.PanicErr(err)
 		p.Done()
-		t = p.Get()
 		fallthrough
 	case NUM, STR, BOOL, AUTO, IDENTIFIER:
-		s, token := p.MatchVar(t.Value, length)
+		s := p.MatchVar(p.token.Value)
 		if s.IsOpen() {
 			p.sentence = s
 		}
-		return token
+		if s.parent.base != LBRACKET {
+			return
+		}
 	}
-	return nil
+	p.Shift()
 }
 
 // 从文件解析出 Api
 func (p *Parser) Parse() *ApiManager {
 	for p.Next() {
-		t := p.Get()
-		for t != nil {
-			t = p.Match(t)
-		}
-		p.Done()
+		p.Match()
 	}
 	return p.ApiManager
 }
 
 func NewParser(path string) *Parser {
-	return &Parser{NewLexer(path), filepath.Dir(path), new(Sentence), NewApiManager()}
+	return &Parser{NewLexer(path), filepath.Dir(path), -1, new(Sentence), NewApiManager()}
 }
