@@ -1,7 +1,5 @@
 package aml
 
-import "sync"
-
 const (
 	NUMBER     = iota + 4 // number
 	STRING                // string
@@ -42,11 +40,33 @@ type Token struct {
 	Value string
 }
 
-// 设置
-func (t *Token) Set(kind int, value string) *Token {
+// 判空
+func (t *Token) IsNull() bool {
+	return t.Kind <= 0
+}
+
+// 新建
+func (t *Token) New(kind int, value string) {
 	t.Kind = kind
 	t.Value = value
+}
+
+// 设置
+func (t *Token) Set(n *Token) *Token {
+	t.Kind = n.Kind
+	t.Value = n.Value
 	return t
+}
+
+// 清除
+func (t *Token) Reset() {
+	t.Kind = -1
+}
+
+// 切换
+func (t *Token) Shift(n *Token) {
+	t.Set(n)
+	n.Reset()
 }
 
 // 关键字
@@ -89,26 +109,4 @@ func GetKind(result string) int {
 	default:
 		return IDENTIFIER
 	}
-}
-
-// Token 池
-type Pool[T any] struct {
-	sync.Pool
-}
-
-func (p *Pool[T]) Get() *T {
-	return p.Pool.Get().(*T)
-}
-
-func (p *Pool[T]) Put(t *T) {
-	// log.Debug("put | ", t)
-	p.Pool.Put(t)
-}
-
-func NewPool[T any]() *Pool[T] {
-	pool := Pool[T]{}
-	pool.New = func() interface{} {
-		return new(T)
-	}
-	return &pool
 }

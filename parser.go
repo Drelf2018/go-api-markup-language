@@ -12,10 +12,10 @@ var log = utils.GetLog()
 
 // 语法分析器
 type Parser struct {
+	// 词法分析器
+	*Lexer
 	// 文件路径
 	dir string
-	// 词法分析器
-	lexer *Lexer
 	// 暂存的 Sentence
 	sentence *Sentence
 	// api 管理器
@@ -23,38 +23,36 @@ type Parser struct {
 }
 
 // 匹配导入语句
-func (p *Parser) MatchImport(old ...*Token) (*Include, error) {
-	token := p.lexer.Scan(old...)
-	path := token.Value
-	token = p.lexer.Scan(token)
-	if token.Kind == IMPORT {
-		types := p.lexer.Scan(token)
-		defer p.lexer.Done(types)
-		return NewInclude(path, types.Value), nil
+func (p *Parser) MatchImport() (*Include, error) {
+	_, path := p.Done()
+	k, v := p.Done()
+	if k != IMPORT {
+		return nil, fmt.Errorf("导入格式 %v 错误", v)
 	}
-	return nil, fmt.Errorf("导入格式 %v 错误", token.Value)
+	_, types := p.Done()
+	return NewInclude(p.dir, path, types), nil
 }
 
 // 匹配参数
-func (p *Parser) MatchArgs(old ...*Token) (args []string, token *Token) {
-	token = p.lexer.Scan(old...)
-	if token.Kind != LANGLE {
+func (p *Parser) MatchArgs() (args []string, kind int) {
+	kind, _ = p.Done()
+	if kind != LANGLE {
 		return
 	}
 	depth := 1
 	args = append(args, "")
 	for depth > 0 {
-		token = p.lexer.Scan(token)
-		if depth == 1 && token.Kind == COMMA {
+		k, v := p.Done()
+		if depth == 1 && k == COMMA {
 			args = append(args, "")
 		} else {
-			if token.Kind == LANGLE {
+			if k == LANGLE {
 				depth++
-			} else if token.Kind == RANGLE {
+			} else if k == RANGLE {
 				depth--
 			}
 			if depth > 0 {
-				args[len(args)-1] += token.Value
+				args[len(args)-1] += v
 			}
 		}
 	}
@@ -62,26 +60,23 @@ func (p *Parser) MatchArgs(old ...*Token) (args []string, token *Token) {
 }
 
 // 匹配定义语句
-func (p *Parser) MatchType(old ...*Token) error {
-	token := p.lexer.Scan(old...)
-	if token.Kind != IDENTIFIER {
-		return fmt.Errorf("%v 不是一个好的变量名", token.Value)
+func (p *Parser) MatchType() error {
+	k, name := p.Done()
+	if k != IDENTIFIER {
+		return fmt.Errorf("%v 不是一个好的变量名", name)
 	}
-	name := token.Value
 	var base int
 	var hint string
-	args, token := p.MatchArgs(token)
+	args, kind := p.MatchArgs()
 	if len(args) != 0 {
-		token = p.lexer.Scan(token)
+		kind, _ = p.Done()
 	}
-	if token.Kind == COLON {
-		token = p.lexer.Scan(token)
-		hint = token.Value
-		token = p.lexer.Scan(token)
+	if kind == COLON {
+		_, hint = p.Done()
+		kind, _ = p.Done()
 	}
-	if token.Kind == ASSIGNMENT {
-		token = p.lexer.Scan(token)
-		base = token.Kind
+	if kind == ASSIGNMENT {
+		base, _ = p.Done()
 	}
 	p.sentence = &Sentence{
 		"type", name, hint, "", args,
@@ -94,61 +89,90 @@ func (p *Parser) MatchType(old ...*Token) error {
 }
 
 // 匹配类型数组
-func (p *Parser) MatchLength(old ...*Token) (length int64, err error) {
-	arg := p.lexer.Scan()
-	if arg.Kind == NUMBER {
-		length, err = strconv.ParseInt(arg.Value, 10, 64)
-		arg = p.lexer.Scan()
+func (p *Parser) MatchLength() (length int64, err error) {
+	k, v := p.Done()
+	if k == NUMBER {
+		length, err = strconv.ParseInt(v, 10, 64)
+		k, v = p.Done()
 	}
-	if arg.Kind != RBRACKET {
-		return -1, fmt.Errorf("%v 不是合法的中括号", arg.Value)
+	if k != RBRACKET {
+		return -1, fmt.Errorf("%v 不是合法的中括号", v)
 	}
 	return
 }
 
 // 匹配 Api
-func (p *Parser) MatchApi(old ...*Token) (*Sentence, error) {
-	typ := old[0].Value
-	token := p.lexer.Scan(old...)
-	name := token.Value
+func (p *Parser) MatchApi(typ string) error {
+	_, name := p.Done()
 	var hint, value string
-	token = p.lexer.Scan(token)
-	if token.Kind != COLON && token.Kind != ASSIGNMENT {
-		return nil, fmt.Errorf("%v 不是一个好的 Api 格式", token.Value)
+	k, v := p.Done()
+	if k != COLON && k != ASSIGNMENT {
+		return fmt.Errorf("%v 不是一个好的 Api 格式", v)
 	}
-	if token.Kind == COLON {
-		token = p.lexer.Scan(token)
-		hint = token.Value
-		token = p.lexer.Scan(token)
+	if k == COLON {
+		_, hint = p.Done()
+		k, _ = p.Done()
 	}
-	if token.Kind == ASSIGNMENT {
-		token = p.lexer.Scan(token)
-		value = token.Value
+	if k == ASSIGNMENT {
+		_, value = p.Done()
 	}
-	p.lexer.Done(token)
 	var s *Sentence
-	return s.Add(typ, name, hint, value, []string{}, p.Types), nil
+	p.sentence = s.Add(typ, name, hint, value, []string{}, p.Types)
+	return nil
+}
+
+// 匹配变量
+func (p *Parser) MatchVar(typ string, length int64) (*Sentence, *Token) {
+	var kind int = LANGLE
+	var args []string
+	var name, hint, value string
+	if GetKind(typ) == IDENTIFIER {
+		tk := p.Types[typ]
+		if tk != nil && len(tk.Args) != 0 {
+			args, kind = p.MatchArgs()
+		}
+	}
+	if p.sentence.base == LBRACKET {
+		return p.sentence.Add(typ, name, hint, value, args, p.Types), nil
+	}
+	if kind == LANGLE {
+		kind, name = p.Done()
+	}
+	if kind == COLON || kind == ASSIGNMENT {
+		name = typ
+		typ = "auto"
+	} else {
+		kind, _ = p.Done()
+	}
+	if kind == COLON {
+		_, hint = p.Done()
+		kind, _ = p.Done()
+	}
+	if kind == ASSIGNMENT {
+		_, value = p.Done()
+		p.Done()
+	}
+	return p.sentence.Add(typ, name, hint, value, args, p.Types), p.Get()
 }
 
 // 选择匹配
 func (p *Parser) Match(t *Token) *Token {
-	// var length int64 = -1
+	var length int64 = -1
 	switch t.Kind {
 	case FROM:
-		i, err := p.MatchImport(t)
+		i, err := p.MatchImport()
 		utils.PanicErr(err)
 		utils.ForMap(
-			NewParser(i.ToApi(p.dir)).Parse().Types,
+			NewParser(i.path).Parse().Types,
 			func(s string, t *Sentence) { p.Types[s] = t },
-			func(s string, t *Sentence) bool { return t != nil && i.Need(s) },
+			func(s string, t *Sentence) bool { return i.Need(s) },
 		)
 	case TYPE:
 		err := p.MatchType()
 		utils.PanicErr(err)
 	case GET, POST:
-		s, err := p.MatchApi(t)
+		err := p.MatchApi(t.Value)
 		utils.PanicErr(err)
-		p.sentence = s
 	case RBRACE, RBRACKET, RGROUP:
 		if p.sentence.IsApi() {
 			p.Add(p.sentence)
@@ -156,44 +180,13 @@ func (p *Parser) Match(t *Token) *Token {
 		p.sentence = p.sentence.parent
 	case LBRACKET:
 		var err error
-		// length, err = p.MatchLength()
-		_, err = p.MatchLength()
+		length, err = p.MatchLength()
 		utils.PanicErr(err)
-		t = p.lexer.Scan()
+		p.Done()
+		t = p.Get()
 		fallthrough
 	case NUM, STR, BOOL, AUTO, IDENTIFIER:
-		typ := t.Value
-		var args []string
-		var token *Token = t
-		var name, hint, value string
-		if t.Kind == IDENTIFIER {
-			tk := p.Types[typ]
-			if tk != nil && len(tk.Args) != 0 {
-				args, token = p.MatchArgs(t)
-			}
-		}
-		if p.sentence.base == LBRACKET {
-			return nil
-		}
-		token = p.lexer.Scan(token)
-		if token.Kind == COLON || token.Kind == ASSIGNMENT {
-			name = typ
-			typ = "auto"
-		} else {
-			name = token.Value
-			token = p.lexer.Scan(token)
-		}
-		if token.Kind == COLON {
-			token = p.lexer.Scan(token)
-			hint = token.Value
-			token = p.lexer.Scan(token)
-		}
-		if token.Kind == ASSIGNMENT {
-			token = p.lexer.Scan(token)
-			value = token.Value
-			token = p.lexer.Scan(token)
-		}
-		s := p.sentence.Add(typ, name, hint, value, args, p.Types)
+		s, token := p.MatchVar(t.Value, length)
 		if s.IsOpen() {
 			p.sentence = s
 		}
@@ -204,15 +197,16 @@ func (p *Parser) Match(t *Token) *Token {
 
 // 从文件解析出 Api
 func (p *Parser) Parse() *ApiManager {
-	for t := range p.lexer.ch {
+	for p.Next() {
+		t := p.Get()
 		for t != nil {
 			t = p.Match(t)
 		}
-		// p.lexer.Done(t)
+		p.Done()
 	}
 	return p.ApiManager
 }
 
 func NewParser(path string) *Parser {
-	return &Parser{filepath.Dir(path), NewLexer(path), new(Sentence), NewApiManager()}
+	return &Parser{NewLexer(path), filepath.Dir(path), new(Sentence), NewApiManager()}
 }

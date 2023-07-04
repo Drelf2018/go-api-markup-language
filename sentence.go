@@ -94,7 +94,6 @@ func (sentence *Sentence) Find(arg string) int {
 
 // 使用类型
 func (sentence *Sentence) Use(vt Types) *Sentence {
-	log.Debug("type | ", sentence.Type)
 	tk := vt[sentence.Type]
 	if tk != nil {
 		sentence.base = tk.base
@@ -120,7 +119,7 @@ func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt T
 	typ, val := AutoType(typ, value)
 
 	base := -1
-	if tk, ok := vt[typ]; GetKind(typ) == IDENTIFIER && ok {
+	if tk, ok := vt[typ]; ok && GetKind(typ) == IDENTIFIER {
 		base = tk.base
 		if tk.IsEnum() {
 			base = -1

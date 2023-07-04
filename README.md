@@ -240,6 +240,12 @@ web-interface/card"
 
 ~~之后会支持别的语言大概~~
 
+## 贡献
+
+<a href="https://github.com/Drelf2018/go-api-markup-language/graphs/contributors">
+  <img src="https://contrib.rocks/image?repo=Drelf2018/go-api-markup-language" />
+</a>
+
 ## 相关项目
 
 - [API Markup Language JavaScript]https://github.com/Kamisato-Ayaka-233/ApiMarkupLanguage) - 使用TypeScript解析AML

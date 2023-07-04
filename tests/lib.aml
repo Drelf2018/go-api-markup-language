@@ -1,9 +1,9 @@
-type query = {
+type query: "查询" = {
     num mid: 目标用户mid
     bool photo: 是否请求用户主页头图 = false
 }
 
-type card = {
+type card: "卡片" = {
     str mid
     str name
     str face
