@@ -84,6 +84,9 @@ func (sentence *Sentence) IsOptional() bool {
 
 // 查找类型参数序号
 func (sentence *Sentence) Find(arg string) int {
+	if sentence == nil {
+		return -1
+	}
 	for i, s := range sentence.Args {
 		if s == arg {
 			return i
@@ -92,51 +95,36 @@ func (sentence *Sentence) Find(arg string) int {
 	return -1
 }
 
-// 使用类型
-func (sentence *Sentence) Use(vt Types) *Sentence {
-	tk := vt[sentence.Type]
-	if tk != nil {
-		sentence.base = tk.base
-		if tk.IsList() {
-			//
-		} else {
-			for s1, s2 := range tk.Map {
-				if s2.index >= 0 {
-					typ := sentence.Args[s2.index]
-					sentence.Map[s1] = s2.Copy(typ).Use(vt)
-				} else {
-					sentence.Map[s1] = s2
-				}
-			}
-		}
-		sentence.SetOutput(nil)
-	}
-	return sentence
-}
-
 // 添加子语句
 func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt Types) *Sentence {
 	typ, val := AutoType(typ, value)
-
-	base := -1
-	if tk, ok := vt[typ]; ok && GetKind(typ) == IDENTIFIER {
-		base = tk.base
-		if tk.IsEnum() {
-			base = -1
-			val = tk.Map[value].Value
-		}
-	}
-
-	idx := -1
-	if sentence != nil {
-		idx = sentence.Find(typ)
-	}
 	s := &Sentence{
 		typ, name, hint, value, args,
-		base, idx, sentence,
+		-1, sentence.Find(typ), sentence,
 		nil, make([]*Sentence, 0), make(map[string]*Sentence),
 	}
+
+	if tk, ok := vt[typ]; ok {
+		if tk.IsEnum() {
+			val = tk.Map[value].Value
+		} else {
+			s.base = tk.base
+			if tk.IsList() {
+				//
+			} else {
+				for s1, s2 := range tk.Map {
+					if s2.index >= 0 {
+						ty, args := NameSlice(s.Args[s2.index])
+						s.Add(ty, s1, s2.Hint, s2.Value, args, vt)
+					} else {
+						s.Map[s1] = s2
+					}
+				}
+			}
+		}
+	}
 	s.SetOutput(val)
+
 	if sentence != nil {
 		if sentence.base == LBRACKET {
 			sentence.List = append(sentence.List, s)
@@ -161,17 +149,6 @@ func (sentence *Sentence) ToDict() map[string]string {
 	dic := make(map[string]string)
 	utils.ForMap(sentence.Map, func(s string, t *Sentence) { dic[s] = t.Value })
 	return dic
-}
-
-// 复制
-func (s *Sentence) Copy(typ string) *Sentence {
-	typ, args := NameSlice(typ)
-	sentence := &Sentence{
-		typ, s.Name, s.Hint, s.Value, args,
-		s.base, s.index, nil,
-		nil, make([]*Sentence, 0), make(map[string]*Sentence),
-	}
-	return sentence
 }
 
 // 修改输出

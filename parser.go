@@ -12,6 +12,8 @@ var log = utils.GetLog()
 
 // 语法分析器
 type Parser struct {
+	// api 管理器
+	ApiManager
 	// 词法分析器
 	*Lexer
 	// 文件路径
@@ -20,8 +22,6 @@ type Parser struct {
 	length int64
 	// 暂存的 Sentence
 	sentence *Sentence
-	// api 管理器
-	*ApiManager
 }
 
 // 匹配导入语句
@@ -31,7 +31,13 @@ func (p *Parser) MatchImport() (*Include, error) {
 	if k != IMPORT {
 		return nil, fmt.Errorf("导入格式 %v 错误", v)
 	}
-	_, types := p.Done()
+	kind := COMMA
+	types := make([]string, 0)
+	for kind == COMMA {
+		_, typ := p.Done()
+		kind, _ = p.Done()
+		types = append(types, typ)
+	}
 	return NewInclude(p.dir, path, types), nil
 }
 
@@ -171,6 +177,7 @@ func (p *Parser) Match() {
 			func(s string, t *Sentence) { p.Types[s] = t },
 			func(s string, t *Sentence) bool { return i.Need(s) },
 		)
+		return
 	case TYPE:
 		err := p.MatchType()
 		utils.PanicErr(err)
@@ -200,7 +207,7 @@ func (p *Parser) Match() {
 }
 
 // 从文件解析出 Api
-func (p *Parser) Parse() *ApiManager {
+func (p *Parser) Parse() ApiManager {
 	for p.Next() {
 		p.Match()
 	}
@@ -208,5 +215,14 @@ func (p *Parser) Parse() *ApiManager {
 }
 
 func NewParser(path string) *Parser {
-	return &Parser{NewLexer(path), filepath.Dir(path), -1, new(Sentence), NewApiManager()}
+	return &Parser{
+		ApiManager{
+			make(Types),
+			make(map[string]*Api),
+		},
+		NewLexer(path),
+		filepath.Dir(path),
+		-1,
+		new(Sentence),
+	}
 }

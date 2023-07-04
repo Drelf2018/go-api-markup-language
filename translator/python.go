@@ -74,7 +74,7 @@ func ToPythonFunc(format string, api *aml.Api) string {
 	return format
 }
 
-func ToPython(am *aml.ApiManager, path, name string) error {
+func ToPython(am aml.ApiManager, path, name string) error {
 	am.ToJson(path + name + ".json")
 	am.ToYaml(path + name + ".yml")
 	s := utils.ReadFile("./template/python/func.py")

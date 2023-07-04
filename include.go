@@ -19,14 +19,10 @@ func (i *Include) Need(s string) bool {
 	return i.all || In(i.args, s)
 }
 
-func NewInclude(dir, path, items string) *Include {
+func NewInclude(dir, path string, args []string) *Include {
 	// 想加个 @ 的语法糖的
 	// if utils.Startswith(ipath, "@") {
 	// }
-	args := strings.Split(items, ",")
-	for i, a := range args {
-		args[i] = strings.TrimSpace(a)
-	}
 	return &Include{
 		filepath.Join(dir, strings.ReplaceAll(path, ".", "/")) + ".aml",
 		args,

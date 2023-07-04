@@ -50,26 +50,17 @@ type Types map[string]*Sentence
 
 // Api 管理器 用来保存和输出解析的 Api
 //
-// Apis: 已经解析完成的任务
+// Types: 支持的变量类型 auto str num bool
 //
 // Output: 用来输出 json/yml 的字典
-//
-// Vartypes: 支持的变量类型 auto str num bool
 type ApiManager struct {
-	Apis   []*Api
-	Output map[string]*Api
 	Types
+	Output map[string]*Api
 }
 
 // 添加新 api
 func (am *ApiManager) Add(sentence *Sentence) {
-	utils.ForMap(
-		sentence.Map,
-		func(s1 string, s2 *Sentence) { s2.Use(am.Types) },
-		func(s1 string, s2 *Sentence) bool { return GetKind(s1) == IDENTIFIER },
-	)
 	api := NewApi(sentence)
-	am.Apis = append(am.Apis, api)
 	am.Output[api.Function] = api
 	if len(api.Info.Map) == 0 {
 		api.Function = ""
@@ -77,7 +68,7 @@ func (am *ApiManager) Add(sentence *Sentence) {
 }
 
 // 解析为 json
-func (am *ApiManager) ToJson(path string) error {
+func (am ApiManager) ToJson(path string) error {
 	output := JsonDump(am.Output, "    ")
 	utils.ForMap(
 		am.Output,
@@ -91,7 +82,7 @@ func (am *ApiManager) ToJson(path string) error {
 }
 
 // 解析为 yml
-func (am *ApiManager) ToYaml(path string) error {
+func (am ApiManager) ToYaml(path string) error {
 	output := YamlDump(am.Output)
 	utils.ForMap(
 		am.Output,
@@ -102,13 +93,4 @@ func (am *ApiManager) ToYaml(path string) error {
 		func(s string, a *Api) bool { return a.Function != "" },
 	)
 	return utils.WriteFile(path, output)
-}
-
-// 构造函数
-func NewApiManager() *ApiManager {
-	return &ApiManager{
-		make([]*Api, 0),
-		make(map[string]*Api),
-		make(Types),
-	}
 }
