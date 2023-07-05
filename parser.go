@@ -24,6 +24,21 @@ type Parser struct {
 	sentence *Sentence
 }
 
+// 判断类型
+func (p *Parser) IsType() (*Sentence, bool) {
+	switch p.token.Kind {
+	case NUM, STR, BOOL, AUTO:
+		return nil, true
+	case IDENTIFIER:
+		s, ok := p.Types[p.token.Value]
+		if ok {
+			return s, true
+		}
+		return nil, In(p.sentence.Args, p.token.Value)
+	}
+	return nil, false
+}
+
 // 匹配导入语句
 func (p *Parser) MatchImport() (*Include, error) {
 	_, path := p.Done()
@@ -89,19 +104,43 @@ func (p *Parser) MatchType() error {
 	p.sentence = &Sentence{
 		"type", name, hint, "", args,
 		base, -1, nil,
-		nil, make([]*Sentence, 0), make(map[string]*Sentence),
+		0, nil, make([]*Sentence, 0), make(map[string]*Sentence),
 	}
 	p.sentence.SetOutput(nil)
 	p.Types[name] = p.sentence
 	return nil
 }
 
-// 匹配类型数组
+// 匹配列表
+func (p *Parser) MatchList() (err error) {
+	if len(p.sentence.List) == 0 {
+		k, v := p.Done()
+
+		if k == AUTO {
+			return fmt.Errorf("%v 不是一个好的类型", v)
+		}
+		p.MatchVar(v)
+		if p.length <= 0 {
+			p.sentence.Length = -1
+		} else {
+			p.sentence.Length = p.length
+		}
+		p.length = 0
+	} else {
+		p.Shift()
+	}
+	return nil
+}
+
+// 匹配类型数组长度
 func (p *Parser) MatchLength() (err error) {
 	k, v := p.Done()
 	if k == NUMBER {
 		p.length, err = strconv.ParseInt(v, 10, 64)
 		k, v = p.Done()
+	}
+	if p.length <= 0 {
+		p.length = -1
 	}
 	if k != RBRACKET {
 		return fmt.Errorf("%v 不是合法的中括号", v)
@@ -125,36 +164,43 @@ func (p *Parser) MatchApi(typ string) error {
 		_, value = p.Done()
 	}
 	var s *Sentence
-	p.sentence = s.Add(typ, name, hint, value, []string{}, p.Types)
+	p.sentence = s.Add(typ, name, hint, value, []string{}, p.Types, 0)
 	return nil
 }
 
 // 匹配变量
 func (p *Parser) MatchVar(typ string) *Sentence {
-	if p.length != -1 {
-		log.Debug(p.length)
-	}
-	var kind int = LANGLE
+	var kind int
 	var args []string
 	var name, hint, value string
-	if GetKind(typ) == IDENTIFIER {
-		tk := p.Types[typ]
+
+	if tk, ok := p.IsType(); ok {
+		// 检查这个类型 typ 是否需要参数
 		if tk != nil && len(tk.Args) != 0 {
-			args, kind = p.MatchArgs()
+			args, _ = p.MatchArgs()
+		}
+	} else {
+		typ, name = "auto", typ
+	}
+
+	// 父语句是列表 那就只读取 typ 和 hint
+	if p.sentence.base == LBRACKET {
+		k, _ := p.Done()
+		if k == COLON {
+			_, hint = p.Done()
+			p.Done()
+		}
+		return p.sentence.Add(typ, "", hint, "", args, p.Types, 0)
+	}
+
+	if name == "" {
+		kind, name = p.Done()
+		if kind != IDENTIFIER {
+			panic(fmt.Errorf("%v 不是一个好的名字", name))
 		}
 	}
-	if p.sentence.base == LBRACKET {
-		return p.sentence.Add(typ, name, hint, value, args, p.Types)
-	}
-	if kind == LANGLE {
-		kind, name = p.Done()
-	}
-	if kind == COLON || kind == ASSIGNMENT {
-		name = typ
-		typ = "auto"
-	} else {
-		kind, _ = p.Done()
-	}
+
+	kind, _ = p.Done()
 	if kind == COLON {
 		_, hint = p.Done()
 		kind, _ = p.Done()
@@ -163,7 +209,12 @@ func (p *Parser) MatchVar(typ string) *Sentence {
 		_, value = p.Done()
 		p.Done()
 	}
-	return p.sentence.Add(typ, name, hint, value, args, p.Types)
+	if p.length != 0 {
+		s := p.sentence.Add(typ, name, hint, value, args, p.Types, p.length)
+		p.length = 0
+		return s
+	}
+	return p.sentence.Add(typ, name, hint, value, args, p.Types, 0)
 }
 
 // 选择匹配
@@ -184,7 +235,14 @@ func (p *Parser) Match() {
 	case GET, POST:
 		err := p.MatchApi(p.token.Value)
 		utils.PanicErr(err)
-	case RBRACE, RBRACKET, RGROUP:
+	case NUMBER:
+		p.length, _ = strconv.ParseInt(p.token.Value, 10, 64)
+	case RBRACKET:
+		err := p.MatchList()
+		utils.PanicErr(err)
+		p.sentence = p.sentence.parent
+		return
+	case RBRACE, RGROUP:
 		if p.sentence.IsApi() {
 			p.Add(p.sentence)
 		}
@@ -199,9 +257,7 @@ func (p *Parser) Match() {
 		if s.IsOpen() {
 			p.sentence = s
 		}
-		if s.parent.base != LBRACKET {
-			return
-		}
+		return
 	}
 	p.Shift()
 }
@@ -222,7 +278,7 @@ func NewParser(path string) *Parser {
 		},
 		NewLexer(path),
 		filepath.Dir(path),
-		-1,
+		0,
 		new(Sentence),
 	}
 }

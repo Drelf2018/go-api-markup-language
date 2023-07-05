@@ -38,11 +38,17 @@ func (l *Lexer) Done() (int, string) {
 // 返回是否保存成功
 func (l *Lexer) SaveStorage() bool {
 	if l.Length() != 0 {
+		kind := -1
 		result := l.Restore()
 		if utils.IsNumber(result) {
-			l.token.New(NUMBER, result)
+			kind = NUMBER
 		} else {
-			l.token.New(GetKind(result), result)
+			kind = GetKind(result)
+		}
+		if l.token.NotNull() {
+			l.victim.New(kind, result)
+		} else {
+			l.token.New(kind, result)
 		}
 		return true
 	}
@@ -83,7 +89,7 @@ func (l *Lexer) Read() {
 		}
 
 		// 跳过空白字符
-		if strings.Contains(" \t\n\r", s) {
+		if strings.Contains(" \t\n\r", s) || l.current == 0 {
 			if l.SaveStorage() {
 				return
 			}

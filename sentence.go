@@ -1,6 +1,8 @@
 package aml
 
 import (
+	"fmt"
+
 	"github.com/Drelf2020/utils"
 )
 
@@ -18,6 +20,7 @@ type Sentence struct {
 	base   int
 	index  int
 	parent *Sentence
+	Length int64                `json:"length,omitempty" yaml:"length,omitempty"`
 	Output any                  `json:"value,omitempty" yaml:"value,omitempty"`
 	List   []*Sentence          `json:"-" yaml:"-"`
 	Map    map[string]*Sentence `json:"-" yaml:"-"`
@@ -96,12 +99,23 @@ func (sentence *Sentence) Find(arg string) int {
 }
 
 // 添加子语句
-func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt Types) *Sentence {
+func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt Types, length int64) *Sentence {
 	typ, val := AutoType(typ, value)
 	s := &Sentence{
 		typ, name, hint, value, args,
 		-1, sentence.Find(typ), sentence,
-		nil, make([]*Sentence, 0), make(map[string]*Sentence),
+		0, nil, make([]*Sentence, 0), make(map[string]*Sentence),
+	}
+
+	if length != 0 {
+		s.base = LBRACKET
+		if length < 0 {
+			s.Length = -1
+		} else {
+			s.Length = length
+		}
+		s.Add(typ, "", "", "", []string{}, vt, 0)
+		s.Type = fmt.Sprintf("[%v]%v", length, s.Type)
 	}
 
 	if tk, ok := vt[typ]; ok {
@@ -110,12 +124,20 @@ func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt T
 		} else {
 			s.base = tk.base
 			if tk.IsList() {
-				//
+				s.Length = tk.Length
+				for _, s2 := range tk.List {
+					if s2.index >= 0 {
+						ty, args := NameSlice(s.Args[s2.index])
+						s.Add(ty, "", s2.Hint, s2.Value, args, vt, 0)
+					} else {
+						s.List = append(s.List, s2)
+					}
+				}
 			} else {
 				for s1, s2 := range tk.Map {
 					if s2.index >= 0 {
 						ty, args := NameSlice(s.Args[s2.index])
-						s.Add(ty, s1, s2.Hint, s2.Value, args, vt)
+						s.Add(ty, s1, s2.Hint, s2.Value, args, vt, 0)
 					} else {
 						s.Map[s1] = s2
 					}

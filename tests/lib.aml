@@ -4,8 +4,8 @@ type query: "查询" = {
 }
 
 type card: "卡片" = {
-    str mid
-    str name
+    mid
+    name
     str face
 }
 
@@ -13,8 +13,8 @@ type ls<T> = [
     num
     num
     str
-    bool
+    bool: 猜
     T
 ]
 
-# type tls = [2]card
+type tls = [2]card
