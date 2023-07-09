@@ -1,11 +1,11 @@
-type query = {
+type query: "查询" = {
     num mid: 目标用户mid
     bool photo: 是否请求用户主页头图 = false
 }
 
-type card = {
-    str mid
-    str name
+type card: "卡片" = {
+    mid
+    name
     str face
 }
 
@@ -13,6 +13,8 @@ type ls<T> = [
     num
     num
     str
-    bool
+    bool: 猜
     T
 ]
+
+type tls = [2]card

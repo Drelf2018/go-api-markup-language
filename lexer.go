@@ -1,265 +1,166 @@
-package parser
+package aml
 
-import "strings"
+import (
+	"bufio"
+	"os"
+	"strings"
 
-const (
-	NUMBER     = iota // number
-	STRING            //string
-	LBRACKET          // [
-	RBRACKET          // ]
-	LBRACE            //  {
-	RBRACE            //  }
-	LANGLE            // <
-	RANGLE            // >
-	LGROUP            // (
-	RGROUP            // )
-	STR               // str
-	ENUM              //enum
-	TYPE              //type
-	QUERY             //query
-	BODY              //body
-	GET               //get method
-	POST              //post method
-	OPTION            //option method
-	PUT               //put method
-	DELETE            //delete method
-	HEAD              //head method
-	PATCH             //patch method
-	BOOL              // bool
-	FROM              // from
-	IMPORT            // import
-	COLON             //:
-	IDENTIFIER        // identifier
-	ASSIGNMENT        // =
-	EOF               // end
+	"github.com/Drelf2020/utils"
 )
 
-type Token struct {
-	Kind  int
-	Value string
-}
-
-func (c *Token) New(kind int, value string) Token {
-	return Token{
-		Kind:  kind,
-		Value: value,
-	}
-}
-
+// 词法分析器
 type Lexer struct {
-	position int64
-	text     string
-	current  rune
+	*Scanner
+	token  *Token
+	victim *Token
 }
 
-func (l *Lexer) New(text string) *Lexer {
-	s := &Lexer{
-		text:     text,
-		position: 0,
+func (l *Lexer) Next() bool {
+	if l.token.NotNull() {
+		return true
 	}
-	s.current = rune(s.text[uint64(s.position)])
-	return s
+	l.Read()
+	return l.token.NotNull()
 }
 
-func (l *Lexer) PutText(text string) {
-	l.text = text
+func (l *Lexer) Shift() *Lexer {
+	l.token.Shift(l.victim)
+	return l
 }
 
-func (l *Lexer) advance() {
-	l.position++
-	if l.position >= int64(len(l.text)) {
-		l.current = 0
-	} else {
-		l.current = rune(l.text[uint64(l.position)])
-	}
+func (l *Lexer) Done() (int, string) {
+	l.Shift().Next()
+	return l.token.Kind, l.token.Value
 }
 
-func (l *Lexer) IsEOF() bool {
-	return l.current == 0
-}
-
-func (l *Lexer) Next() *Token {
-	numberic := "0123456789"
-	alphbet := "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ$_"
-	brackets := "(){}[]<>"
-	length := len(l.text)
-	var token *Token
-	for idx := 0; idx <= length && l.current != 0; idx++ {
-		if strings.ContainsRune(numberic, l.current) {
-			result := ""
-			for nidx := l.position; nidx < int64(len(l.text)) && strings.ContainsRune(numberic+".", l.current); nidx++ {
-				result += string(l.current)
-				l.advance()
-			}
-			token = &Token{
-				Kind:  NUMBER,
-				Value: result,
-			}
-		} else if strings.ContainsRune(brackets, l.current) {
-			switch l.current {
-			case '<':
-				token = &Token{
-					Kind:  LANGLE,
-					Value: string(l.current),
-				}
-			case '>':
-				token = &Token{
-					Kind:  RANGLE,
-					Value: string(l.current),
-				}
-			case '{':
-				token = &Token{
-					Kind:  LBRACE,
-					Value: string(l.current),
-				}
-			case '}':
-				token = &Token{
-					Kind:  RBRACE,
-					Value: string(l.current),
-				}
-			case '[':
-				token = &Token{
-					Kind:  LBRACKET,
-					Value: string(l.current),
-				}
-			case ']':
-				token = &Token{
-					Kind:  RBRACKET,
-					Value: string(l.current),
-				}
-			}
-		} else if strings.ContainsRune(alphbet, l.current) {
-			result := ""
-			for aidx := l.position; aidx < int64(len(l.text)) && strings.ContainsRune(alphbet+numberic, l.current); aidx++ {
-				result += string(l.current)
-				l.advance()
-			}
-			switch result {
-			case "from":
-				token = &Token{
-					Kind:  FROM,
-					Value: result,
-				}
-			case "import":
-				token = &Token{
-					Kind:  IMPORT,
-					Value: result,
-				}
-			case "str":
-				token = &Token{
-					Kind:  STR,
-					Value: result,
-				}
-			case "enum":
-				token = &Token{
-					Kind:  ENUM,
-					Value: result,
-				}
-			case "type":
-				token = &Token{
-					Kind:  TYPE,
-					Value: result,
-				}
-			case "query":
-				token = &Token{
-					Kind:  QUERY,
-					Value: result,
-				}
-			case "body":
-				token = &Token{
-					Kind:  BODY,
-					Value: result,
-				}
-			case "bool":
-				token = &Token{
-					Kind:  BOOL,
-					Value: result,
-				}
-			case "GET":
-				token = &Token{
-					Kind:  GET,
-					Value: result,
-				}
-			case "POST":
-				token = &Token{
-					Kind:  POST,
-					Value: result,
-				}
-			case "OPTION":
-				token = &Token{
-					Kind:  OPTION,
-					Value: result,
-				}
-			case "PUT":
-				token = &Token{
-					Kind:  PUT,
-					Value: result,
-				}
-			case "DELETE":
-				token = &Token{
-					Kind:  DELETE,
-					Value: result,
-				}
-			case "HEAD":
-				token = &Token{
-					Kind:  HEAD,
-					Value: result,
-				}
-			case "PATCH":
-				token = &Token{
-					Kind:  PATCH,
-					Value: result,
-				}
-			default:
-				token = &Token{
-					Kind:  IDENTIFIER,
-					Value: result,
-				}
-			}
-		} else if strings.ContainsRune("=", l.current) {
-			token = &Token{
-				Kind:  ASSIGNMENT,
-				Value: string(l.current),
-			}
-		} else if strings.ContainsRune(":", l.current) {
-			token = &Token{
-				Kind:  COLON,
-				Value: string(l.current),
-			}
-		} else if strings.ContainsRune(" \t", l.current) {
-			// 跳过空白字符
-			l.advance()
-			continue
-		} else if strings.ContainsRune("\"", l.current) {
-			// 字符串
-			result := ""
-			for sidx := l.position; sidx < int64(len(l.text)) && l.current != '"'; sidx++ {
-				result += string(l.current)
-				l.advance()
-			}
-			token = &Token{
-				Kind:  STRING,
-				Value: result,
-			}
+// 保存暂存的字符
+//
+// 返回是否保存成功
+func (l *Lexer) SaveStorage() bool {
+	if l.Length() != 0 {
+		kind := -1
+		result := l.Restore()
+		if utils.IsNumber(result) {
+			kind = NUMBER
 		} else {
-			if l.current == '#' {
-				// 忽略注释
-				for cidx := l.position; cidx < int64(len(l.text)) && l.current != '\n'; cidx++ {
-					l.advance()
-					continue
-				}
-			} else {
-				token = &Token{
-					Kind:  EOF,
-					Value: "",
-				}
-			}
+			kind = GetKind(result)
 		}
-		l.advance()
-		return token
+		if l.token.NotNull() {
+			l.victim.New(kind, result)
+		} else {
+			l.token.New(kind, result)
+		}
+		return true
 	}
-	return &Token{
-		Kind:  EOF,
-		Value: "",
+	return false
+}
+
+// 保存暂存和当前的字符
+func (l *Lexer) SaveNow(kind int) {
+	if l.SaveStorage() {
+		l.victim.New(kind, l.Scanner.Read())
+	} else {
+		l.token.New(kind, l.Scanner.Read())
 	}
+}
+
+func (l *Lexer) Read() {
+	for l.Scanner.Next() {
+		s := l.Scanner.Read()
+
+		// 多行文本
+		if l.HasQuotation() {
+			if l.First() == s {
+				// 多行字符串结束了
+				l.token.New(STRING, l.Restore()[1:])
+				return
+			} else {
+				l.Store()
+			}
+			continue
+		}
+
+		// 如果开头是 # 则忽略直到换行
+		if l.First() == "#" {
+			if s != "\n" {
+				continue
+			}
+			l.Restore()
+		}
+
+		// 跳过空白字符
+		if strings.Contains(" \t\n\r", s) || l.current == 0 {
+			if l.SaveStorage() {
+				return
+			}
+			continue
+		}
+
+		switch s {
+		case ",":
+			l.SaveNow(COMMA)
+		case "<":
+			l.SaveNow(LANGLE)
+		case ">":
+			l.SaveNow(RANGLE)
+		case "(":
+			l.SaveNow(LGROUP)
+		case ")":
+			l.SaveNow(RGROUP)
+		case "[":
+			l.SaveNow(LBRACKET)
+		case "]":
+			l.SaveNow(RBRACKET)
+		case "{":
+			l.SaveNow(LBRACE)
+		case "}":
+			l.SaveNow(RBRACE)
+		case "=":
+			l.SaveNow(ASSIGNMENT)
+		case ":":
+			l.SaveNow(COLON)
+		case "#":
+			l.SaveStorage()
+			fallthrough
+		default:
+			l.Store()
+			continue
+		}
+
+		// 井号开头继续循环 其他直接退出
+		return
+	}
+}
+
+// 获取文件流
+func FromFile(path string) (l *Lexer) {
+	file, err := os.Open(path)
+	if err != nil {
+		panic(err)
+	}
+	// bufio.NewReader(file) 等价 bufio.NewReaderSize(file, 4096) 可根据需求修改 size
+	return &Lexer{
+		&Scanner{
+			file,
+			bufio.NewReader(file),
+			0,
+			nil,
+			make([]rune, 0),
+		},
+		new(Token),
+		new(Token),
+	}
+}
+
+// 获取网络流
+func FromURL(url string) (l *Lexer) {
+	return new(Lexer)
+}
+
+// 自动选择
+func NewLexer(path string) *Lexer {
+	if utils.Startswith(path, "http") {
+		return FromURL(path)
+	}
+	return FromFile(path)
 }

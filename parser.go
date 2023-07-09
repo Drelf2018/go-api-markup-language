@@ -1,98 +1,284 @@
-package parser
+package aml
 
 import (
+	"fmt"
 	"path/filepath"
-	"regexp"
-	"strings"
+	"strconv"
 
 	"github.com/Drelf2020/utils"
 )
 
 var log = utils.GetLog()
 
-// 从文件解析出 Api
-func GetApi(path string) (am *ApiManager) {
-	am = NewApiManager()
-	// 读文本
-	api := utils.ReadFile(path)
+// 语法分析器
+type Parser struct {
+	// api 管理器
+	ApiManager
+	// 词法分析器
+	*Lexer
+	// 文件路径
+	dir string
+	// 数组长度
+	length int64
+	// 暂存的 Sentence
+	sentence *Sentence
+}
 
-	// 预处理 获取 import 导入的类型
-	dir := filepath.Dir(path)
-	utils.ForEach(
-		regexp.MustCompile(`from +([^ ]+) +import +([\w, *]+)`).FindAllStringSubmatch(api, -1),
-		func(s []string) {
-			i := NewInclude(s)
-			api = strings.ReplaceAll(api, s[0], "")
-			utils.ForMap(
-				*GetApi(i.ToApi(dir)).VarTypes,
-				func(s string, t *Sentence) { am.VarTypes.Add(t) },
-				func(s string, t *Sentence) bool { return t != nil && i.Need(s) },
-			)
-		},
-	)
-
-	// 预处理 保存所有自定义类型名
-	utils.ForEach(
-		am.VarTypes.FindSentences(api),
-		func(t *Sentence) { am.VarTypes.Add(t, t.Args...) },
-		func(t *Sentence) bool { return t.IsType() || t.IsEnum() },
-	)
-
-	// 解析 Api 以及解析所有类型 包括自定义的
-	type Context struct {
-		*Handler[*Sentence]
-		parent *Sentence
-		chn    string
-	}
-	ctx := Context{NewHandler[*Sentence](), new(Sentence), ""}
-	ctx.Prepare(func(t *Sentence) {
-		// 预处理
-		// 父语句是列表则翻转类型和变量
-		// 否则更新类型
-		if ctx.parent != nil && ctx.parent.IsBracket() {
-			*t = *t.Exchange(am.VarTypes)
-		} else {
-			t.SetTypes(am.VarTypes)
+// 判断类型
+func (p *Parser) IsType() (*Sentence, bool) {
+	switch p.token.Kind {
+	case NUM, STR, BOOL, AUTO:
+		return nil, true
+	case IDENTIFIER:
+		s, ok := p.Types[p.token.Value]
+		if ok {
+			return s, true
 		}
-	}).Add(
-		// 判断是否是定义类型或定义枚举
-		func(t *Sentence) bool { return (t.IsType() || t.IsEnum()) && (t.IsOpen() || t.IsBracket()) },
-		func(t *Sentence) { ctx.parent = am.VarTypes.Get(t.Name) },
-	).Add(
-		// 判断是否是 Api
-		func(t *Sentence) bool { return t.IsApi() },
-		func(t *Sentence) { ctx.parent = t },
-	).Add(
-		// 判断是否闭合该层
-		// 如果闭合的是 Api 层还要添加进 ApiManager
-		func(t *Sentence) bool { return t.IsClose() },
-		func(t *Sentence) {
-			if ctx.parent.IsApi() {
-				am.Add(ctx.parent)
-			}
-			ctx.parent = ctx.parent.Parent
-		},
-	).Add(
-		// chn 不为空时把当前语句作为字符串加进上一个多行文本语句的 Value 里
-		func(t *Sentence) bool { return ctx.chn != "" },
-		func(t *Sentence) {
-			ctx.parent.Value += t.Name
-			if t.HasQuotation(ctx.chn) {
-				ctx.parent.Value = utils.Slice(ctx.parent.Value, ctx.chn, ctx.chn, 0)
-				ctx.parent = ctx.parent.Parent
-				ctx.chn = ""
-			}
-		},
-	).Add(
-		// 判断是否是多行文本 或者有左大中括号
-		func(t *Sentence) bool {
-			ctx.chn = t.IsMultiLine()
-			ctx.parent.Add(t)
-			return ctx.chn != "" || t.IsOpen() || t.IsBracket()
-		},
-		func(t *Sentence) { ctx.parent = t },
-	)
+		return nil, In(p.sentence.Args, p.token.Value)
+	}
+	return nil, false
+}
 
-	utils.ForEach(am.VarTypes.Union(MethodTypes).FindSentences(api), ctx.Do)
+// 匹配导入语句
+func (p *Parser) MatchImport() (*Include, error) {
+	_, path := p.Done()
+	k, v := p.Done()
+	if k != IMPORT {
+		return nil, fmt.Errorf("导入格式 %v 错误", v)
+	}
+	kind := COMMA
+	types := make([]string, 0)
+	for kind == COMMA {
+		_, typ := p.Done()
+		kind, _ = p.Done()
+		types = append(types, typ)
+	}
+	return NewInclude(p.dir, path, types), nil
+}
+
+// 匹配参数
+func (p *Parser) MatchArgs() (args []string, kind int) {
+	kind, _ = p.Done()
+	if kind != LANGLE {
+		return
+	}
+	depth := 1
+	args = append(args, "")
+	for depth > 0 {
+		k, v := p.Done()
+		if depth == 1 && k == COMMA {
+			args = append(args, "")
+		} else {
+			if k == LANGLE {
+				depth++
+			} else if k == RANGLE {
+				depth--
+			}
+			if depth > 0 {
+				args[len(args)-1] += v
+			}
+		}
+	}
 	return
+}
+
+// 匹配定义语句
+func (p *Parser) MatchType() error {
+	k, name := p.Done()
+	if k != IDENTIFIER {
+		return fmt.Errorf("%v 不是一个好的变量名", name)
+	}
+	var base int
+	var hint string
+	args, kind := p.MatchArgs()
+	if len(args) != 0 {
+		kind, _ = p.Done()
+	}
+	if kind == COLON {
+		_, hint = p.Done()
+		kind, _ = p.Done()
+	}
+	if kind == ASSIGNMENT {
+		base, _ = p.Done()
+	}
+	p.sentence = &Sentence{
+		"type", name, hint, "", args,
+		base, -1, nil,
+		0, nil, make([]*Sentence, 0), make(map[string]*Sentence),
+	}
+	p.sentence.SetOutput(nil)
+	p.Types[name] = p.sentence
+	return nil
+}
+
+// 匹配列表
+func (p *Parser) MatchList() (err error) {
+	if len(p.sentence.List) == 0 {
+		k, v := p.Done()
+
+		if k == AUTO {
+			return fmt.Errorf("%v 不是一个好的类型", v)
+		}
+		p.MatchVar(v)
+		if p.length <= 0 {
+			p.sentence.Length = -1
+		} else {
+			p.sentence.Length = p.length
+		}
+		p.length = 0
+	} else {
+		p.Shift()
+	}
+	return nil
+}
+
+// 匹配类型数组长度
+func (p *Parser) MatchLength() (err error) {
+	k, v := p.Done()
+	if k == NUMBER {
+		p.length, err = strconv.ParseInt(v, 10, 64)
+		k, v = p.Done()
+	}
+	if p.length <= 0 {
+		p.length = -1
+	}
+	if k != RBRACKET {
+		return fmt.Errorf("%v 不是合法的中括号", v)
+	}
+	return
+}
+
+// 匹配 Api
+func (p *Parser) MatchApi(typ string) error {
+	_, name := p.Done()
+	var hint, value string
+	k, v := p.Done()
+	if k != COLON && k != ASSIGNMENT {
+		return fmt.Errorf("%v 不是一个好的 Api 格式", v)
+	}
+	if k == COLON {
+		_, hint = p.Done()
+		k, _ = p.Done()
+	}
+	if k == ASSIGNMENT {
+		_, value = p.Done()
+	}
+	var s *Sentence
+	p.sentence = s.Add(typ, name, hint, value, []string{}, p.Types, 0)
+	return nil
+}
+
+// 匹配变量
+func (p *Parser) MatchVar(typ string) *Sentence {
+	var kind int
+	var args []string
+	var name, hint, value string
+
+	if tk, ok := p.IsType(); ok {
+		// 检查这个类型 typ 是否需要参数
+		if tk != nil && len(tk.Args) != 0 {
+			args, _ = p.MatchArgs()
+		}
+	} else {
+		typ, name = "auto", typ
+	}
+
+	// 父语句是列表 那就只读取 typ 和 hint
+	if p.sentence.base == LBRACKET {
+		k, _ := p.Done()
+		if k == COLON {
+			_, hint = p.Done()
+			p.Done()
+		}
+		return p.sentence.Add(typ, "", hint, "", args, p.Types, 0)
+	}
+
+	if name == "" {
+		kind, name = p.Done()
+		if kind != IDENTIFIER {
+			panic(fmt.Errorf("%v 不是一个好的名字", name))
+		}
+	}
+
+	kind, _ = p.Done()
+	if kind == COLON {
+		_, hint = p.Done()
+		kind, _ = p.Done()
+	}
+	if kind == ASSIGNMENT {
+		_, value = p.Done()
+		p.Done()
+	}
+	if p.length != 0 {
+		s := p.sentence.Add(typ, name, hint, value, args, p.Types, p.length)
+		p.length = 0
+		return s
+	}
+	return p.sentence.Add(typ, name, hint, value, args, p.Types, 0)
+}
+
+// 选择匹配
+func (p *Parser) Match() {
+	switch p.token.Kind {
+	case FROM:
+		i, err := p.MatchImport()
+		utils.PanicErr(err)
+		utils.ForMap(
+			NewParser(i.path).Parse().Types,
+			func(s string, t *Sentence) { p.Types[s] = t },
+			func(s string, t *Sentence) bool { return i.Need(s) },
+		)
+		return
+	case TYPE:
+		err := p.MatchType()
+		utils.PanicErr(err)
+	case GET, POST:
+		err := p.MatchApi(p.token.Value)
+		utils.PanicErr(err)
+	case NUMBER:
+		p.length, _ = strconv.ParseInt(p.token.Value, 10, 64)
+	case RBRACKET:
+		err := p.MatchList()
+		utils.PanicErr(err)
+		p.sentence = p.sentence.parent
+		return
+	case RBRACE, RGROUP:
+		if p.sentence.IsApi() {
+			p.Add(p.sentence)
+		}
+		p.sentence = p.sentence.parent
+	case LBRACKET:
+		err := p.MatchLength()
+		utils.PanicErr(err)
+		p.Done()
+		fallthrough
+	case NUM, STR, BOOL, AUTO, IDENTIFIER:
+		s := p.MatchVar(p.token.Value)
+		if s.IsOpen() {
+			p.sentence = s
+		}
+		return
+	}
+	p.Shift()
+}
+
+// 从文件解析出 Api
+func (p *Parser) Parse() ApiManager {
+	for p.Next() {
+		p.Match()
+	}
+	return p.ApiManager
+}
+
+func NewParser(path string) *Parser {
+	return &Parser{
+		ApiManager{
+			make(Types),
+			make(map[string]*Api),
+		},
+		NewLexer(path),
+		filepath.Dir(path),
+		0,
+		new(Sentence),
+	}
 }
