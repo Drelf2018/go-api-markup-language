@@ -21,7 +21,7 @@ type userInfo<T> = {
 
 GET get_user_card: "用户名片信息" = {
     str url = "https://api.bilibili.com/x/web-interface/card"
-    []query params
+    query params
     res<userInfo<card>> response
-    tls data
+#    tls data
 }
