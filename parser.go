@@ -12,16 +12,18 @@ var log = utils.GetLog()
 
 // 语法分析器
 type Parser struct {
-	// api 管理器
-	ApiManager
 	// 词法分析器
 	*Lexer
 	// 文件路径
-	dir string
+	path string
 	// 数组长度
 	length int64
 	// 暂存的 Sentence
 	sentence *Sentence
+	// 变量类型
+	Types map[string]*Sentence
+	// Api 字典
+	Output map[string]*Api
 }
 
 // 判断类型
@@ -53,7 +55,7 @@ func (p *Parser) MatchImport() (*Include, error) {
 		kind, _ = p.Done()
 		types = append(types, typ)
 	}
-	return NewInclude(p.dir, path, types), nil
+	return NewInclude(p.GetDir(), path, types), nil
 }
 
 // 匹配参数
@@ -224,7 +226,7 @@ func (p *Parser) Match() {
 		i, err := p.MatchImport()
 		utils.PanicErr(err)
 		utils.ForMap(
-			NewParser(i.path).Parse().Types,
+			NewParser(i.path).Types,
 			func(s string, t *Sentence) { p.Types[s] = t },
 			func(s string, t *Sentence) bool { return i.Need(s) },
 		)
@@ -244,7 +246,7 @@ func (p *Parser) Match() {
 		return
 	case RBRACE, RGROUP:
 		if p.sentence.IsApi() {
-			p.Add(p.sentence)
+			p.Output[p.sentence.Name] = NewApi(p.sentence)
 		}
 		p.sentence = p.sentence.parent
 	case LBRACKET:
@@ -262,23 +264,27 @@ func (p *Parser) Match() {
 	p.Shift()
 }
 
-// 从文件解析出 Api
-func (p *Parser) Parse() ApiManager {
-	for p.Next() {
-		p.Match()
-	}
-	return p.ApiManager
+func (p *Parser) GetDir() string {
+	return filepath.Dir(p.path)
+}
+
+func (p *Parser) NewExt(ext string) string {
+	fullname := filepath.Base(p.path)
+	suffix := filepath.Ext(fullname)
+	return fullname[0:len(fullname)-len(suffix)] + ext
 }
 
 func NewParser(path string) *Parser {
-	return &Parser{
-		ApiManager{
-			make(Types),
-			make(map[string]*Api),
-		},
+	p := Parser{
 		NewLexer(path),
-		filepath.Dir(path),
+		path,
 		0,
 		new(Sentence),
+		make(map[string]*Sentence),
+		make(map[string]*Api),
 	}
+	for p.Next() {
+		p.Match()
+	}
+	return &p
 }

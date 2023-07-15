@@ -99,7 +99,7 @@ func (sentence *Sentence) Find(arg string) int {
 }
 
 // 添加子语句
-func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt Types, length int64) *Sentence {
+func (sentence *Sentence) Add(typ, name, hint, value string, args []string, vt map[string]*Sentence, length int64) *Sentence {
 	typ, val := AutoType(typ, value)
 	s := &Sentence{
 		typ, name, hint, value, args,

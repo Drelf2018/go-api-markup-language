@@ -1,37 +1,92 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
+	"strings"
 
-	"github.com/Drelf2018/aml2py"
+	// _ "github.com/Drelf2018/aml2py"
 	aml "github.com/Drelf2018/go-api-markup-language"
 	"github.com/Drelf2020/utils"
 )
 
 var log = utils.GetLog()
 
-func GetPrefix(p string) string {
-	fullname := filepath.Base(p)
-	suffix := filepath.Ext(fullname)
-	return fullname[0 : len(fullname)-len(suffix)]
+func init() {
+	// 导出 json 插件
+	aml.Load(aml.Plugin{
+		Cmd:         "json",
+		Author:      "Drelf2018",
+		Version:     "0.0.1",
+		Description: "导出 json 文件",
+		Link:        "https://github.com/Drelf2018/go-api-markup-language/build",
+		Generate: func(p *aml.Parser) []aml.File {
+			output := aml.JsonDump(p.Output, "    ")
+			utils.ForMap(
+				p.Output,
+				func(s string, a *aml.Api) {
+					info := aml.JsonDump(a.Info.ToDict(), "        ")
+					output = strings.Replace(output, "\"function\": \""+s+"\"", utils.Slice(info, "\"", "\"", 3), 1)
+				},
+				func(s string, a *aml.Api) bool { return a.Function != "" },
+			)
+			return []aml.File{{
+				Name:    p.NewExt(".json"),
+				Content: output,
+			}}
+		},
+	})
+
+	// 导出 yaml 插件
+	aml.Load(aml.Plugin{
+		Cmd:         "yaml",
+		Author:      "Drelf2018",
+		Version:     "0.0.1",
+		Description: "导出 yml 文件",
+		Link:        "https://github.com/Drelf2018/go-api-markup-language/build",
+		Generate: func(p *aml.Parser) []aml.File {
+			output := aml.YamlDump(p.Output)
+			utils.ForMap(
+				p.Output,
+				func(s string, a *aml.Api) {
+					info := aml.YamlDump(map[string]map[string]string{"info": a.Info.ToDict()})
+					output = strings.Replace(output, "  function: "+s+"\n", strings.Replace(info, "info:\n", "", 1), 1)
+				},
+				func(s string, a *aml.Api) bool { return a.Function != "" },
+			)
+			return []aml.File{{
+				Name:    p.NewExt(".yml"),
+				Content: output,
+			}}
+		},
+	})
 }
 
 func main() {
-	var path string
-	if len(os.Args) < 2 {
-		log.Info("请输入 AML 文件路径：")
-		fmt.Scan(&path)
-	} else {
-		path = os.Args[1]
+	cmds := make(map[string]*bool)
+	utils.ForEach[string](
+		aml.GetCMD(),
+		func(s string) { cmds[s] = flag.Bool(s, false, "") },
+	)
+	path := flag.String("path", "", "")
+	flag.Parse()
+	keys := []string{}
+	for k, ok := range cmds {
+		if *ok {
+			keys = append(keys, k)
+		}
 	}
-	name := GetPrefix(path)
-	am := aml.NewParser(path).Parse()
+	if *path == "" {
+		log.Info("请输入 AML 文件路径：")
+		fmt.Scan(path)
+	}
+	parser := aml.NewParser(*path)
 	os.Mkdir("output", os.ModePerm)
-	am.ToJson("./output/" + name + ".json")
-	am.ToYaml("./output/" + name + ".yml")
-	api, file := aml2py.ToPython(am, name+".json")
-	utils.WriteFile("./output/api.py", api)
-	utils.WriteFile("./output/"+name+".py", file)
+	utils.ForEach(
+		parser.Export(keys...),
+		func(f aml.File) {
+			utils.WriteFile("./output/"+f.Name, f.Content)
+		},
+	)
 }
