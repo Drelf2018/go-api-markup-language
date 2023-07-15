@@ -1,11 +1,5 @@
 package aml
 
-import (
-	"strings"
-
-	"github.com/Drelf2020/utils"
-)
-
 // 请求任务
 type Api struct {
 	// 接口地址
@@ -32,7 +26,7 @@ type Api struct {
 
 // 构造函数
 func NewApi(sentence *Sentence) *Api {
-	return &Api{
+	api := Api{
 		sentence.Pop("url").Value,
 		sentence.Type,
 		sentence.Hint,
@@ -44,53 +38,8 @@ func NewApi(sentence *Sentence) *Api {
 		sentence.Pop("cookies"),
 		sentence.Pop("response"),
 	}
-}
-
-type Types map[string]*Sentence
-
-// Api 管理器 用来保存和输出解析的 Api
-//
-// Types: 支持的变量类型 auto str num bool
-//
-// Output: 用来输出 json/yml 的字典
-type ApiManager struct {
-	Types
-	Output map[string]*Api
-}
-
-// 添加新 api
-func (am *ApiManager) Add(sentence *Sentence) {
-	api := NewApi(sentence)
-	am.Output[api.Function] = api
 	if len(api.Info.Map) == 0 {
 		api.Function = ""
 	}
-}
-
-// 解析为 json
-func (am ApiManager) ToJson(path string) error {
-	output := JsonDump(am.Output, "    ")
-	utils.ForMap(
-		am.Output,
-		func(s string, a *Api) {
-			info := JsonDump(a.Info.ToDict(), "        ")
-			output = strings.Replace(output, "\"function\": \""+s+"\"", utils.Slice(info, "\"", "\"", 3), 1)
-		},
-		func(s string, a *Api) bool { return a.Function != "" },
-	)
-	return utils.WriteFile(path, output)
-}
-
-// 解析为 yml
-func (am ApiManager) ToYaml(path string) error {
-	output := YamlDump(am.Output)
-	utils.ForMap(
-		am.Output,
-		func(s string, a *Api) {
-			info := YamlDump(map[string]map[string]string{"info": a.Info.ToDict()})
-			output = strings.Replace(output, "  function: "+s+"\n", strings.Replace(info, "info:\n", "", 1), 1)
-		},
-		func(s string, a *Api) bool { return a.Function != "" },
-	)
-	return utils.WriteFile(path, output)
+	return &api
 }

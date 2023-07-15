@@ -1,5 +1,3 @@
-github.com/Drelf2018/aml2py v1.0.0 h1:8bdjnH4gHzFXwI4n1d2JktYqI7gFmN3ShCGHFAN1VBY=
-github.com/Drelf2018/aml2py v1.0.0/go.mod h1:tYJQKquRSPwa9YUQSezmqDibhwVj8LriYkwivZgGVSE=
 github.com/Drelf2020/utils v0.0.0-20230617054513-1c11ad3f45e9 h1:zniO9Ba/VSYz5Ki3pPchDSmXauY+rj1+Uyf9gj0B2Xg=
 github.com/Drelf2020/utils v0.0.0-20230617054513-1c11ad3f45e9/go.mod h1:kvfDpo8jArhg++N7fyE6ynH1VrhngX0HFfQrMBE1Gbs=
 github.com/antonfisher/nested-logrus-formatter v1.3.1 h1:NFJIr+pzwv5QLHTPyKz9UMEoHck02Q9L0FP13b/xSbQ=
