@@ -8,8 +8,6 @@ import (
 	"github.com/Drelf2020/utils"
 )
 
-var log = utils.GetLog()
-
 // 语法分析器
 type Parser struct {
 	// 词法分析器
