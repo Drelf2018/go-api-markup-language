@@ -15,7 +15,7 @@ var log = utils.GetLog()
 
 func init() {
 	// 导出 json 插件
-	aml.Load(aml.Plugin{
+	aml.Plugin{
 		Cmd:         "json",
 		Author:      "Drelf2018",
 		Version:     "0.0.1",
@@ -36,10 +36,10 @@ func init() {
 				Content: output,
 			}}
 		},
-	})
+	}.Load()
 
 	// 导出 yaml 插件
-	aml.Load(aml.Plugin{
+	aml.Plugin{
 		Cmd:         "yaml",
 		Author:      "Drelf2018",
 		Version:     "0.0.1",
@@ -60,33 +60,19 @@ func init() {
 				Content: output,
 			}}
 		},
-	})
+	}.Load()
 }
 
 func main() {
-	cmds := make(map[string]*bool)
-	utils.ForEach[string](
-		aml.GetCMD(),
-		func(s string) { cmds[s] = flag.Bool(s, false, "") },
-	)
+	// 注册并获取参数
 	path := flag.String("path", "", "")
 	flag.Parse()
-	keys := []string{}
-	for k, ok := range cmds {
-		if *ok {
-			keys = append(keys, k)
-		}
-	}
 	if *path == "" {
 		log.Info("请输入 AML 文件路径：")
 		fmt.Scan(path)
 	}
+
 	parser := aml.NewParser(*path)
 	os.Mkdir("output", os.ModePerm)
-	utils.ForEach(
-		parser.Export(keys...),
-		func(f aml.File) {
-			utils.WriteFile("./output/"+f.Name, f.Content)
-		},
-	)
+	utils.ForEach(parser.Export(), func(f aml.File) { utils.WriteFile("./output/"+f.Name, f.Content) })
 }

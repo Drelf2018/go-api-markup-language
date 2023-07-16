@@ -1,5 +1,7 @@
 package aml
 
+import "flag"
+
 type File struct {
 	Name    string
 	Content string
@@ -12,30 +14,42 @@ type Plugin struct {
 	Description string
 	Link        string
 	Generate    func(p *Parser) (files []File)
+
+	need *bool
 }
 
-var plugins = make(map[string]Plugin)
+var plugins = make([]Plugin, 0)
 
 // 注册插件
-func Load(p Plugin) {
-	plugins[p.Cmd] = p
+func (p Plugin) Load() {
+	p.need = flag.Bool(p.Cmd, false, "导出 "+p.Cmd+" 的参数")
+	plugins = append(plugins, p)
 }
 
-// 允许的命令
-func GetCMD() (r []string) {
-	for c := range plugins {
-		r = append(r, c)
+// 获取已注册插件
+func GetLoadedPlugin() []Plugin {
+	r := make([]Plugin, len(plugins))
+	copy(r, plugins)
+	return r
+}
+
+// 未输入参数
+func NoFlag() bool {
+	for _, plugin := range plugins {
+		if *plugin.need {
+			return false
+		}
 	}
-	return
+	return true
 }
 
-// 导出
+// 导出文件
+//
+// cmds: 可选的必须导出参数
 func (p *Parser) Export(cmds ...string) (files []File) {
-	for _, cmd := range cmds {
-		if plugin, ok := plugins[cmd]; ok {
+	for _, plugin := range plugins {
+		if *plugin.need || In(cmds, plugin.Cmd) {
 			files = append(files, plugin.Generate(p)...)
-		} else {
-			log.Errorf("参数 %v 不支持", cmd)
 		}
 	}
 	return
